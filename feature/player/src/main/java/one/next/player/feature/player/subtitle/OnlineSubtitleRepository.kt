@@ -7,6 +7,7 @@ import java.io.File
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.net.URI
 import javax.inject.Inject
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -67,10 +68,7 @@ class OnlineSubtitleRepository(
                 throw IOException("Unable to move subtitle file")
             }
             targetFile.setLastModified(nowMillis())
-            return DownloadedOnlineSubtitle(
-                file = targetFile,
-                uri = Uri.fromFile(targetFile),
-            )
+            return DownloadedOnlineSubtitle(file = targetFile)
         } catch (exception: EmptyOnlineSubtitleException) {
             tempFile.delete()
             throw exception
@@ -97,6 +95,10 @@ class OnlineSubtitleRepository(
     fun touchSubtitle(uri: Uri) {
         if (uri.scheme != "file") return
         val file = uri.path?.let(::File) ?: return
+        touchSubtitleFile(file)
+    }
+
+    internal fun touchSubtitleFile(file: File) {
         if (!file.isFile) return
         if (file.parentFile?.canonicalFile != subtitleCacheDir.canonicalFile) return
 
@@ -108,7 +110,8 @@ class OnlineSubtitleRepository(
     ) {
         companion object {
             fun from(url: String): ParsedSubtitleUrl {
-                val uri = Uri.parse(url)
+                val uri = runCatching { URI(url.trim()) }
+                    .getOrElse { throw InvalidOnlineSubtitleUrlException() }
                 val scheme = uri.scheme?.lowercase().orEmpty()
                 if (scheme !in SUPPORTED_SCHEMES) {
                     throw InvalidOnlineSubtitleSchemeException(scheme)
@@ -157,8 +160,10 @@ class OnlineSubtitleRepository(
 
 data class DownloadedOnlineSubtitle(
     val file: File,
-    val uri: Uri,
-)
+) {
+    val uriString: String = file.toURI().toString()
+    val uri: Uri get() = Uri.parse(uriString)
+}
 
 class DownloadStream(
     val inputStream: InputStream,
