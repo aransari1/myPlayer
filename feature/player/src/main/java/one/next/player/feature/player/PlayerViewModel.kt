@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import one.next.player.core.common.Logger
+import one.next.player.core.common.extensions.round
 import one.next.player.core.data.repository.ExternalSubtitleFontSource
 import one.next.player.core.data.repository.MediaRepository
 import one.next.player.core.data.repository.PreferencesRepository
@@ -30,6 +31,10 @@ import one.next.player.feature.player.extensions.remoteProtocol
 import one.next.player.feature.player.extensions.remoteServerId
 import one.next.player.feature.player.state.SubtitleOptionsEvent
 import one.next.player.feature.player.state.VideoZoomEvent
+
+internal fun normalizeVideoSharpening(value: Float): Float = value
+    .coerceIn(PlayerPreferences.DEFAULT_VIDEO_SHARPENING, PlayerPreferences.MAX_VIDEO_SHARPENING)
+    .round(2)
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
@@ -111,6 +116,12 @@ class PlayerViewModel @Inject constructor(
     fun updateVideoContentScale(contentScale: VideoContentScale) {
         viewModelScope.launch {
             preferencesRepository.updatePlayerPreferences { it.copy(playerVideoZoom = contentScale) }
+        }
+    }
+
+    fun updateVideoSharpening(value: Float) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences { it.copy(videoSharpening = normalizeVideoSharpening(value)) }
         }
     }
 

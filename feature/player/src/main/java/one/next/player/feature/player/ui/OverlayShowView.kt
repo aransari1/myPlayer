@@ -15,11 +15,14 @@ fun BoxScope.OverlayShowView(
     player: Player,
     overlayView: OverlayView?,
     videoContentScale: VideoContentScale,
+    videoSharpening: Float,
     onDismiss: () -> Unit = {},
     onSelectSubtitleClick: () -> Unit = {},
     onAddOnlineSubtitleClick: (String) -> Unit = {},
     onSubtitleOptionEvent: (SubtitleOptionsEvent) -> Unit = {},
     onVideoContentScaleChanged: (VideoContentScale) -> Unit = {},
+    onVideoSharpeningChanged: (Float) -> Unit = {},
+    onShowVideoFilters: () -> Unit = {},
 ) {
     Box(
         modifier = Modifier
@@ -57,7 +60,14 @@ fun BoxScope.OverlayShowView(
         shouldShow = overlayView == OverlayView.VIDEO_CONTENT_SCALE,
         videoContentScale = videoContentScale,
         onVideoContentScaleChanged = onVideoContentScaleChanged,
+        onShowVideoFilters = onShowVideoFilters,
         onDismiss = onDismiss,
+    )
+
+    VideoFiltersView(
+        shouldShow = overlayView == OverlayView.VIDEO_FILTERS,
+        videoSharpening = videoSharpening,
+        onVideoSharpeningChanged = onVideoSharpeningChanged,
     )
 
     PlaylistView(
@@ -74,5 +84,6 @@ enum class OverlayView {
     SUBTITLE_SELECTOR,
     PLAYBACK_SPEED,
     VIDEO_CONTENT_SCALE,
+    VIDEO_FILTERS,
     PLAYLIST,
 }

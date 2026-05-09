@@ -888,11 +888,14 @@ internal fun MediaPlayerScreen(
                 player = player,
                 overlayView = overlayView,
                 videoContentScale = videoZoomAndContentScaleState.videoContentScale,
+                videoSharpening = playerPreferences.videoSharpening,
                 onDismiss = { overlayView = null },
                 onSelectSubtitleClick = onSelectSubtitleClick,
                 onAddOnlineSubtitleClick = onAddOnlineSubtitleClick,
                 onSubtitleOptionEvent = viewModel::onSubtitleOptionEvent,
                 onVideoContentScaleChanged = { videoZoomAndContentScaleState.onVideoContentScaleChanged(it) },
+                onVideoSharpeningChanged = viewModel::updateVideoSharpening,
+                onShowVideoFilters = { overlayView = OverlayView.VIDEO_FILTERS },
             )
         }
     }

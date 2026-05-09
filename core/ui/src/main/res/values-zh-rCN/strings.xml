@@ -47,6 +47,7 @@
     <string name="playback">播放</string>
     <string name="playback_behavior">播放行为</string>
     <string name="video_processing">画面处理</string>
+    <string name="video_filters">视频滤镜</string>
     <string name="interface_name">界面</string>
     <string name="shortest">最短</string>
     <string name="longest">最长</string>
