@@ -38,6 +38,7 @@ class AudioPreferencesViewModel @Inject constructor(
         when (event) {
             is AudioPreferencesUiEvent.ShowDialog -> showDialog(event.value)
             is AudioPreferencesUiEvent.UpdateAudioLanguage -> updateAudioLanguage(event.value)
+            is AudioPreferencesUiEvent.UpdateMaxInitialPlayerVolume -> updateMaxInitialPlayerVolume(event.value)
             AudioPreferencesUiEvent.TogglePauseOnHeadsetDisconnect -> togglePauseOnHeadsetDisconnect()
             AudioPreferencesUiEvent.ToggleShowSystemVolumePanel -> toggleShowSystemVolumePanel()
             AudioPreferencesUiEvent.ToggleRequireAudioFocus -> toggleRequireAudioFocus()
@@ -93,6 +94,19 @@ class AudioPreferencesViewModel @Inject constructor(
         }
     }
 
+    private fun updateMaxInitialPlayerVolume(value: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences {
+                it.copy(
+                    maxInitialPlayerVolumePercentage = value.coerceIn(
+                        PlayerPreferences.MIN_INITIAL_PLAYER_VOLUME_PERCENTAGE,
+                        PlayerPreferences.MAX_INITIAL_PLAYER_VOLUME_PERCENTAGE,
+                    ),
+                )
+            }
+        }
+    }
+
     private fun toggleVolumeNormalization() {
         viewModelScope.launch {
             preferencesRepository.updatePlayerPreferences {
@@ -123,6 +137,7 @@ sealed interface AudioPreferenceDialog {
 sealed interface AudioPreferencesUiEvent {
     data class ShowDialog(val value: AudioPreferenceDialog?) : AudioPreferencesUiEvent
     data class UpdateAudioLanguage(val value: String) : AudioPreferencesUiEvent
+    data class UpdateMaxInitialPlayerVolume(val value: Int) : AudioPreferencesUiEvent
     data object TogglePauseOnHeadsetDisconnect : AudioPreferencesUiEvent
     data object ToggleShowSystemVolumePanel : AudioPreferencesUiEvent
     data object ToggleRequireAudioFocus : AudioPreferencesUiEvent

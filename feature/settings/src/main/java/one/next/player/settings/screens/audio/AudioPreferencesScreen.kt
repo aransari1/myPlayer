@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
@@ -23,10 +24,12 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import one.next.player.core.model.PlayerPreferences
 import one.next.player.core.ui.R
 import one.next.player.core.ui.components.ClickablePreferenceItem
 import one.next.player.core.ui.components.ListSectionTitle
 import one.next.player.core.ui.components.NextTopAppBar
+import one.next.player.core.ui.components.PreferenceSlider
 import one.next.player.core.ui.components.PreferenceSwitch
 import one.next.player.core.ui.components.RadioTextButton
 import one.next.player.core.ui.designsystem.NextIcons
@@ -57,6 +60,9 @@ private fun AudioPreferencesContent(
     onNavigateUp: () -> Unit,
 ) {
     val languages = remember { listOf(Pair("None", "")) + LocalesHelper.getAvailableLocales() }
+    val initialVolumeLimitRange = PlayerPreferences.MIN_INITIAL_PLAYER_VOLUME_PERCENTAGE.toFloat().rangeTo(
+        PlayerPreferences.MAX_INITIAL_PLAYER_VOLUME_PERCENTAGE.toFloat(),
+    )
 
     Scaffold(
         topBar = {
@@ -81,7 +87,7 @@ private fun AudioPreferencesContent(
                 .padding(innerPadding.withBottomFallback())
                 .padding(horizontal = 16.dp),
         ) {
-            ListSectionTitle(text = stringResource(id = R.string.playback))
+            ListSectionTitle(text = stringResource(id = R.string.audio_track_settings))
             Column(
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
@@ -92,13 +98,21 @@ private fun AudioPreferencesContent(
                     icon = NextIcons.Language,
                     onClick = { onEvent(AudioPreferencesUiEvent.ShowDialog(AudioPreferenceDialog.AudioLanguageDialog)) },
                     isFirstItem = true,
+                    isLastItem = true,
                 )
+            }
+
+            ListSectionTitle(text = stringResource(id = R.string.audio_focus_and_devices))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
                 PreferenceSwitch(
                     title = stringResource(R.string.require_audio_focus),
                     description = stringResource(R.string.require_audio_focus_desc),
                     icon = NextIcons.Focus,
                     isChecked = uiState.preferences.shouldRequireAudioFocus,
                     onClick = { onEvent(AudioPreferencesUiEvent.ToggleRequireAudioFocus) },
+                    isFirstItem = true,
                 )
                 PreferenceSwitch(
                     title = stringResource(id = R.string.pause_on_headset_disconnect),
@@ -113,20 +127,62 @@ private fun AudioPreferencesContent(
                     icon = NextIcons.Headset,
                     isChecked = uiState.preferences.shouldShowSystemVolumePanel,
                     onClick = { onEvent(AudioPreferencesUiEvent.ToggleShowSystemVolumePanel) },
+                    isLastItem = true,
                 )
+            }
+
+            ListSectionTitle(text = stringResource(id = R.string.volume_memory))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
                 PreferenceSwitch(
                     title = stringResource(id = R.string.remember_volume_level),
                     description = stringResource(id = R.string.remember_volume_level_description),
                     icon = NextIcons.VolumeUp,
                     isChecked = uiState.preferences.shouldRememberPlayerVolume,
                     onClick = { onEvent(AudioPreferencesUiEvent.ToggleRememberPlayerVolume) },
+                    isFirstItem = true,
                 )
+                PreferenceSlider(
+                    title = stringResource(id = R.string.initial_volume_limit),
+                    description = stringResource(id = R.string.percent, uiState.preferences.maxInitialPlayerVolumePercentage),
+                    icon = NextIcons.VolumeUp,
+                    isEnabled = uiState.preferences.shouldRememberPlayerVolume,
+                    value = uiState.preferences.maxInitialPlayerVolumePercentage.toFloat(),
+                    valueRange = initialVolumeLimitRange,
+                    onValueChange = { onEvent(AudioPreferencesUiEvent.UpdateMaxInitialPlayerVolume(it.toInt())) },
+                    isLastItem = true,
+                    trailingContent = {
+                        FilledIconButton(
+                            enabled = uiState.preferences.shouldRememberPlayerVolume,
+                            onClick = {
+                                onEvent(
+                                    AudioPreferencesUiEvent.UpdateMaxInitialPlayerVolume(
+                                        PlayerPreferences.DEFAULT_MAX_INITIAL_PLAYER_VOLUME_PERCENTAGE,
+                                    ),
+                                )
+                            },
+                        ) {
+                            Icon(
+                                imageVector = NextIcons.History,
+                                contentDescription = stringResource(id = R.string.reset_initial_volume_limit),
+                            )
+                        }
+                    },
+                )
+            }
+
+            ListSectionTitle(text = stringResource(id = R.string.volume_processing))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
                 PreferenceSwitch(
                     title = stringResource(id = R.string.volume_normalization),
                     description = stringResource(id = R.string.volume_normalization_desc),
                     icon = NextIcons.VolumeUp,
                     isChecked = uiState.preferences.isVolumeNormalizationEnabled,
                     onClick = { onEvent(AudioPreferencesUiEvent.ToggleVolumeNormalization) },
+                    isFirstItem = true,
                 )
                 PreferenceSwitch(
                     title = stringResource(id = R.string.volume_boost),

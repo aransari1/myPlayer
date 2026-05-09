@@ -78,6 +78,10 @@
     <string name="appearance_and_general_name">外觀與通用</string>
     <string name="embedded_styles_desc">應用存在於字幕檔之中的嵌入式樣式，例如 ASS 等</string>
     <string name="subtitle_background_desc">啟用字幕背景</string>
+    <string name="audio_track_settings">音軌</string>
+    <string name="audio_focus_and_devices">音訊焦點與外設</string>
+    <string name="volume_memory">音量記憶</string>
+    <string name="volume_processing">音量處理</string>
     <string name="preferred_audio_lang">優先的音訊語言</string>
     <string name="permission_request">權限請求</string>
     <string name="system_volume_panel_desc">當配戴耳機調整音量時，顯示系統音量面板</string>
@@ -99,6 +103,10 @@
     <string name="external_subtitle_font_import_success">字幕字型匯入成功</string>
     <string name="external_subtitle_font_import_failed">字幕字型匯入失敗</string>
     <string name="external_subtitle_font_clear_success">已清除匯入字幕字型</string>
+    <string name="subtitle_loading">字幕載入</string>
+    <string name="subtitle_style_source">樣式來源</string>
+    <string name="subtitle_font_settings">字型</string>
+    <string name="subtitle_appearance">字幕外觀</string>
     <string name="preferred_subtitle_lang">優先的字幕語言</string>
     <string name="a_z">A-Z</string>
     <string name="unknown_error">發生了一個未知的錯誤</string>
@@ -116,6 +124,8 @@
     <string name="system_volume_panel">系統音量面板</string>
     <string name="remember_volume_level">記住音量</string>
     <string name="remember_volume_level_description">開始播放時恢復播放器音量</string>
+    <string name="initial_volume_limit">初始音量上限</string>
+    <string name="reset_initial_volume_limit">重設初始音量上限</string>
     <string name="volume_normalization">音量標準化</string>
     <string name="volume_normalization_desc">透過動態範圍處理緩和音量忽大忽小</string>
     <string name="player_description">播放器外觀、播放控制元件</string>
@@ -152,6 +162,9 @@
     <string name="subtitle_text_encoding">字幕文字編碼</string>
     <string name="video">影片</string>
     <string name="playback">播放</string>
+    <string name="playback_behavior">播放行為</string>
+    <string name="skip_segments">跳過片段</string>
+    <string name="video_processing">畫面處理</string>
     <string name="fast_seek">快速跳轉</string>
     <string name="select_playback_speed">選擇播放速度</string>
     <string name="seek_gesture">跳轉手勢</string>
@@ -260,6 +273,11 @@
     <string name="delete_item_info">將會永久刪除選取項目，這個動作無法復原</string>
     <string name="delete_items_info">將會永久刪除選取項目，這個動作無法復原</string>
     <string name="gestures">手勢</string>
+    <string name="swipe_gestures">滑動手勢</string>
+    <string name="tap_gestures">點擊手勢</string>
+    <string name="long_press_gestures">長按手勢</string>
+    <string name="zoom_and_pan_gestures">縮放和平移</string>
+    <string name="other_gestures">其他手勢</string>
     <string name="volume_gesture">音量手勢</string>
     <string name="volume_gesture_description">透過上下滑動調整音量</string>
     <string name="brightness_gesture">亮度手勢</string>

@@ -53,6 +53,7 @@ data class PlayerPreferences(
     val isVolumeBoostEnabled: Boolean = false,
     val shouldRememberPlayerVolume: Boolean = false,
     val playerVolumePercentage: Int = DEFAULT_PLAYER_VOLUME_PERCENTAGE,
+    val maxInitialPlayerVolumePercentage: Int = DEFAULT_MAX_INITIAL_PLAYER_VOLUME_PERCENTAGE,
     val isVolumeNormalizationEnabled: Boolean = false,
 
     // 字幕偏好
@@ -85,7 +86,9 @@ data class PlayerPreferences(
         const val DEFAULT_SUBTITLE_TEXT_SIZE = 20
         const val DEFAULT_CONTROLLER_AUTO_HIDE_TIMEOUT = 4
         const val DEFAULT_PLAYER_VOLUME_PERCENTAGE = 100
-        const val MAX_PLAYER_INITIAL_VOLUME_PERCENTAGE = 80
+        const val DEFAULT_MAX_INITIAL_PLAYER_VOLUME_PERCENTAGE = 80
+        const val MIN_INITIAL_PLAYER_VOLUME_PERCENTAGE = 10
+        const val MAX_INITIAL_PLAYER_VOLUME_PERCENTAGE = 100
         const val MAX_PLAYER_VOLUME_PERCENTAGE = 200
         const val MAX_SEEK_INCREMENT = 120
     }

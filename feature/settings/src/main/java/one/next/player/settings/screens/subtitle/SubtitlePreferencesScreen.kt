@@ -127,7 +127,7 @@ private fun SubtitlePreferencesContent(
                 .padding(innerPadding.withBottomFallback())
                 .padding(horizontal = 16.dp),
         ) {
-            ListSectionTitle(text = stringResource(id = R.string.playback))
+            ListSectionTitle(text = stringResource(id = R.string.subtitle_loading))
             Column(
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
@@ -155,7 +155,8 @@ private fun SubtitlePreferencesContent(
                     isLastItem = true,
                 )
             }
-            ListSectionTitle(text = stringResource(id = R.string.appearance_name))
+
+            ListSectionTitle(text = stringResource(id = R.string.subtitle_style_source))
             Column(
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
@@ -168,12 +169,36 @@ private fun SubtitlePreferencesContent(
                     onClick = { context.startActivity(Intent(Settings.ACTION_CAPTIONING_SETTINGS)) },
                     isFirstItem = true,
                 )
+                PreferenceSwitch(
+                    title = stringResource(R.string.embedded_styles),
+                    description = stringResource(R.string.embedded_styles_desc),
+                    icon = NextIcons.Style,
+                    isChecked = uiState.preferences.shouldApplyEmbeddedStyles,
+                    onClick = { onEvent(SubtitlePreferencesUiEvent.ToggleApplyEmbeddedStyles) },
+                    isLastItem = uiState.preferences.shouldUseSystemCaptionStyle.not(),
+                )
+                if (uiState.preferences.shouldUseSystemCaptionStyle) {
+                    ClickablePreferenceItem(
+                        title = stringResource(id = R.string.external_subtitle_font_notice_title),
+                        description = stringResource(id = R.string.external_subtitle_font_system_style_notice),
+                        icon = NextIcons.Info,
+                        isEnabled = false,
+                        isLastItem = true,
+                    )
+                }
+            }
+
+            ListSectionTitle(text = stringResource(id = R.string.subtitle_font_settings))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
                 ClickablePreferenceItem(
                     title = stringResource(id = R.string.subtitle_font),
                     description = uiState.preferences.subtitleFont.name(),
                     icon = NextIcons.Font,
                     isEnabled = uiState.preferences.shouldUseSystemCaptionStyle.not(),
                     onClick = { onEvent(SubtitlePreferencesUiEvent.ShowDialog(SubtitlePreferenceDialog.SubtitleFontDialog)) },
+                    isFirstItem = true,
                 )
                 ClickablePreferenceItem(
                     title = stringResource(id = R.string.external_subtitle_font_import),
@@ -199,7 +224,14 @@ private fun SubtitlePreferencesContent(
                     },
                     isEnabled = uiState.isExternalFontAvailable,
                     onClick = { onEvent(SubtitlePreferencesUiEvent.ClearExternalSubtitleFont) },
+                    isLastItem = true,
                 )
+            }
+
+            ListSectionTitle(text = stringResource(id = R.string.subtitle_appearance))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
                 PreferenceSwitch(
                     title = stringResource(id = R.string.subtitle_text_bold),
                     description = stringResource(id = R.string.subtitle_text_bold_desc),
@@ -207,6 +239,7 @@ private fun SubtitlePreferencesContent(
                     isEnabled = uiState.preferences.shouldUseSystemCaptionStyle.not(),
                     isChecked = uiState.preferences.shouldUseBoldSubtitleText,
                     onClick = { onEvent(SubtitlePreferencesUiEvent.ToggleSubtitleTextBold) },
+                    isFirstItem = true,
                 )
                 PreferenceSlider(
                     title = stringResource(id = R.string.subtitle_text_size),
@@ -237,24 +270,8 @@ private fun SubtitlePreferencesContent(
                     isEnabled = uiState.preferences.shouldUseSystemCaptionStyle.not(),
                     isChecked = uiState.preferences.shouldShowSubtitleBackground,
                     onClick = { onEvent(SubtitlePreferencesUiEvent.ToggleSubtitleBackground) },
+                    isLastItem = true,
                 )
-                PreferenceSwitch(
-                    title = stringResource(R.string.embedded_styles),
-                    description = stringResource(R.string.embedded_styles_desc),
-                    icon = NextIcons.Style,
-                    isChecked = uiState.preferences.shouldApplyEmbeddedStyles,
-                    onClick = { onEvent(SubtitlePreferencesUiEvent.ToggleApplyEmbeddedStyles) },
-                    isLastItem = uiState.preferences.shouldUseSystemCaptionStyle.not(),
-                )
-                if (uiState.preferences.shouldUseSystemCaptionStyle) {
-                    ClickablePreferenceItem(
-                        title = stringResource(id = R.string.external_subtitle_font_notice_title),
-                        description = stringResource(id = R.string.external_subtitle_font_system_style_notice),
-                        icon = NextIcons.Info,
-                        isEnabled = false,
-                        isLastItem = true,
-                    )
-                }
             }
         }
 

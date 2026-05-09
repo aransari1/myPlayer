@@ -92,7 +92,7 @@ private fun GesturePreferencesContent(
                 .padding(innerPadding.withBottomFallback())
                 .padding(horizontal = 16.dp),
         ) {
-            ListSectionTitle(text = stringResource(id = R.string.gestures))
+            ListSectionTitle(text = stringResource(id = R.string.swipe_gestures))
             Column(
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
@@ -166,6 +166,7 @@ private fun GesturePreferencesContent(
                     value = uiState.preferences.volumeGestureSensitivity,
                     valueRange = 0.1f..2.0f,
                     onValueChange = { onEvent(GesturePreferencesUiEvent.UpdateVolumeGestureSensitivity(it)) },
+                    isLastItem = true,
                     trailingContent = {
                         FilledIconButton(
                             enabled = uiState.preferences.isVolumeSwipeGestureEnabled,
@@ -178,21 +179,12 @@ private fun GesturePreferencesContent(
                         }
                     },
                 )
-                PreferenceSwitch(
-                    title = stringResource(id = R.string.zoom_gesture),
-                    description = stringResource(id = R.string.zoom_gesture_description),
-                    icon = NextIcons.Pinch,
-                    isChecked = uiState.preferences.shouldUseZoomControls,
-                    onClick = { onEvent(GesturePreferencesUiEvent.ToggleUseZoomControls) },
-                )
-                PreferenceSwitch(
-                    title = stringResource(id = R.string.pan_gesture),
-                    description = stringResource(id = R.string.pan_gesture_description),
-                    icon = NextIcons.Pan,
-                    isEnabled = uiState.preferences.shouldUseZoomControls,
-                    isChecked = uiState.preferences.isPanGestureEnabled,
-                    onClick = { onEvent(GesturePreferencesUiEvent.ToggleEnablePanGesture) },
-                )
+            }
+
+            ListSectionTitle(text = stringResource(id = R.string.tap_gestures))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
                 PreferenceSwitchWithDivider(
                     title = stringResource(id = R.string.double_tap),
                     description = stringResource(id = R.string.double_tap_description),
@@ -200,7 +192,15 @@ private fun GesturePreferencesContent(
                     isChecked = (uiState.preferences.doubleTapGesture != DoubleTapGesture.NONE),
                     onChecked = { onEvent(GesturePreferencesUiEvent.ToggleDoubleTapGesture) },
                     onClick = { onEvent(GesturePreferencesUiEvent.ShowDialog(GesturePreferenceDialog.DoubleTapDialog)) },
+                    isFirstItem = true,
+                    isLastItem = true,
                 )
+            }
+
+            ListSectionTitle(text = stringResource(id = R.string.long_press_gestures))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
                 PreferenceSwitchWithDivider(
                     title = stringResource(id = R.string.long_press_gesture),
                     description = stringResource(id = R.string.long_press_gesture_desc, uiState.preferences.longPressControlsSpeed),
@@ -208,6 +208,7 @@ private fun GesturePreferencesContent(
                     isChecked = uiState.preferences.shouldUseLongPressControls,
                     onChecked = { onEvent(GesturePreferencesUiEvent.ToggleUseLongPressControls) },
                     onClick = { onEvent(GesturePreferencesUiEvent.ShowDialog(GesturePreferenceDialog.LongPressControlsSpeedDialog)) },
+                    isFirstItem = true,
                 )
                 PreferenceSwitch(
                     title = stringResource(id = R.string.long_press_variable_speed),
@@ -216,15 +217,46 @@ private fun GesturePreferencesContent(
                     isEnabled = uiState.preferences.shouldUseLongPressControls,
                     isChecked = uiState.preferences.shouldUseLongPressVariableSpeed,
                     onClick = { onEvent(GesturePreferencesUiEvent.ToggleUseLongPressVariableSpeed) },
+                    isLastItem = true,
                 )
+            }
+
+            ListSectionTitle(text = stringResource(id = R.string.zoom_and_pan_gestures))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
+                PreferenceSwitch(
+                    title = stringResource(id = R.string.zoom_gesture),
+                    description = stringResource(id = R.string.zoom_gesture_description),
+                    icon = NextIcons.Pinch,
+                    isChecked = uiState.preferences.shouldUseZoomControls,
+                    onClick = { onEvent(GesturePreferencesUiEvent.ToggleUseZoomControls) },
+                    isFirstItem = true,
+                )
+                PreferenceSwitch(
+                    title = stringResource(id = R.string.pan_gesture),
+                    description = stringResource(id = R.string.pan_gesture_description),
+                    icon = NextIcons.Pan,
+                    isEnabled = uiState.preferences.shouldUseZoomControls,
+                    isChecked = uiState.preferences.isPanGestureEnabled,
+                    onClick = { onEvent(GesturePreferencesUiEvent.ToggleEnablePanGesture) },
+                    isLastItem = true,
+                )
+            }
+
+            ListSectionTitle(text = stringResource(id = R.string.other_gestures))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
                 PreferenceSlider(
                     title = stringResource(R.string.seek_increment),
                     description = stringResource(R.string.seconds, uiState.preferences.seekIncrement),
-                    isLastItem = true,
                     icon = NextIcons.Replay,
                     value = uiState.preferences.seekIncrement.toFloat(),
                     valueRange = 1.0f..PlayerPreferences.MAX_SEEK_INCREMENT.toFloat(),
                     onValueChange = { onEvent(GesturePreferencesUiEvent.UpdateSeekIncrement(it.toInt())) },
+                    isFirstItem = true,
+                    isLastItem = true,
                     trailingContent = {
                         FilledIconButton(onClick = { onEvent(GesturePreferencesUiEvent.UpdateSeekIncrement(PlayerPreferences.DEFAULT_SEEK_INCREMENT)) }) {
                             Icon(

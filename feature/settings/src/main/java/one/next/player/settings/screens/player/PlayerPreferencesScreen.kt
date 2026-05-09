@@ -63,6 +63,8 @@ private fun PlayerPreferencesContent(
     onEvent: (PlayerPreferencesUiEvent) -> Unit,
     onNavigateUp: () -> Unit = {},
 ) {
+    val isPipFeatureSupported = LocalContext.current.isPipFeatureSupported
+
     Scaffold(
         topBar = {
             NextTopAppBar(
@@ -98,7 +100,6 @@ private fun PlayerPreferencesContent(
                     valueRange = 1.0f..60.0f,
                     onValueChange = { onEvent(PlayerPreferencesUiEvent.UpdateControlAutoHideTimeout(it.toInt())) },
                     isFirstItem = true,
-                    isLastItem = true,
                     trailingContent = {
                         FilledIconButton(onClick = { onEvent(PlayerPreferencesUiEvent.UpdateControlAutoHideTimeout(PlayerPreferences.DEFAULT_CONTROLLER_AUTO_HIDE_TIMEOUT)) }) {
                             Icon(
@@ -108,9 +109,18 @@ private fun PlayerPreferencesContent(
                         }
                     },
                 )
+                ClickablePreferenceItem(
+                    title = stringResource(id = R.string.player_screen_orientation),
+                    description = uiState.preferences.playerScreenOrientation.name(),
+                    icon = NextIcons.Rotation,
+                    onClick = {
+                        onEvent(PlayerPreferencesUiEvent.ShowDialog(PlayerPreferenceDialog.PlayerScreenOrientationDialog))
+                    },
+                    isLastItem = true,
+                )
             }
 
-            ListSectionTitle(text = stringResource(id = R.string.playback))
+            ListSectionTitle(text = stringResource(id = R.string.playback_behavior))
             Column(
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
@@ -138,38 +148,6 @@ private fun PlayerPreferencesContent(
                         }
                     },
                 )
-                PreferenceSlider(
-                    title = stringResource(id = R.string.skip_opening),
-                    description = stringResource(R.string.seconds, uiState.preferences.skipOpeningSeconds),
-                    icon = NextIcons.Replay,
-                    value = uiState.preferences.skipOpeningSeconds.toFloat(),
-                    valueRange = 0f..PlayerPreferences.MAX_SKIP_OPENING_SECONDS.toFloat(),
-                    onValueChange = { onEvent(PlayerPreferencesUiEvent.UpdateSkipOpeningSeconds(it.toInt())) },
-                    trailingContent = {
-                        FilledIconButton(onClick = { onEvent(PlayerPreferencesUiEvent.UpdateSkipOpeningSeconds(0)) }) {
-                            Icon(
-                                imageVector = NextIcons.History,
-                                contentDescription = stringResource(id = R.string.reset_skip_opening),
-                            )
-                        }
-                    },
-                )
-                PreferenceSlider(
-                    title = stringResource(id = R.string.skip_ending),
-                    description = stringResource(R.string.seconds, uiState.preferences.skipEndingSeconds),
-                    icon = NextIcons.Replay,
-                    value = uiState.preferences.skipEndingSeconds.toFloat(),
-                    valueRange = 0f..PlayerPreferences.MAX_SKIP_ENDING_SECONDS.toFloat(),
-                    onValueChange = { onEvent(PlayerPreferencesUiEvent.UpdateSkipEndingSeconds(it.toInt())) },
-                    trailingContent = {
-                        FilledIconButton(onClick = { onEvent(PlayerPreferencesUiEvent.UpdateSkipEndingSeconds(0)) }) {
-                            Icon(
-                                imageVector = NextIcons.History,
-                                contentDescription = stringResource(id = R.string.reset_skip_ending),
-                            )
-                        }
-                    },
-                )
                 PreferenceSwitch(
                     title = stringResource(id = R.string.autoplay_settings),
                     description = stringResource(
@@ -179,7 +157,7 @@ private fun PlayerPreferencesContent(
                     isChecked = uiState.preferences.shouldAutoPlay,
                     onClick = { onEvent(PlayerPreferencesUiEvent.ToggleAutoplay) },
                 )
-                if (LocalContext.current.isPipFeatureSupported) {
+                if (isPipFeatureSupported) {
                     PreferenceSwitch(
                         title = stringResource(id = R.string.pip_settings),
                         description = stringResource(
@@ -207,7 +185,54 @@ private fun PlayerPreferencesContent(
                     icon = NextIcons.Brightness,
                     isChecked = uiState.preferences.shouldRememberPlayerBrightness,
                     onClick = { onEvent(PlayerPreferencesUiEvent.ToggleRememberBrightnessLevel) },
+                    isLastItem = true,
                 )
+            }
+
+            ListSectionTitle(text = stringResource(id = R.string.skip_segments))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
+                PreferenceSlider(
+                    title = stringResource(id = R.string.skip_opening),
+                    description = stringResource(R.string.seconds, uiState.preferences.skipOpeningSeconds),
+                    icon = NextIcons.Replay,
+                    value = uiState.preferences.skipOpeningSeconds.toFloat(),
+                    valueRange = 0f..PlayerPreferences.MAX_SKIP_OPENING_SECONDS.toFloat(),
+                    onValueChange = { onEvent(PlayerPreferencesUiEvent.UpdateSkipOpeningSeconds(it.toInt())) },
+                    isFirstItem = true,
+                    trailingContent = {
+                        FilledIconButton(onClick = { onEvent(PlayerPreferencesUiEvent.UpdateSkipOpeningSeconds(0)) }) {
+                            Icon(
+                                imageVector = NextIcons.History,
+                                contentDescription = stringResource(id = R.string.reset_skip_opening),
+                            )
+                        }
+                    },
+                )
+                PreferenceSlider(
+                    title = stringResource(id = R.string.skip_ending),
+                    description = stringResource(R.string.seconds, uiState.preferences.skipEndingSeconds),
+                    icon = NextIcons.Replay,
+                    value = uiState.preferences.skipEndingSeconds.toFloat(),
+                    valueRange = 0f..PlayerPreferences.MAX_SKIP_ENDING_SECONDS.toFloat(),
+                    onValueChange = { onEvent(PlayerPreferencesUiEvent.UpdateSkipEndingSeconds(it.toInt())) },
+                    isLastItem = true,
+                    trailingContent = {
+                        FilledIconButton(onClick = { onEvent(PlayerPreferencesUiEvent.UpdateSkipEndingSeconds(0)) }) {
+                            Icon(
+                                imageVector = NextIcons.History,
+                                contentDescription = stringResource(id = R.string.reset_skip_ending),
+                            )
+                        }
+                    },
+                )
+            }
+
+            ListSectionTitle(text = stringResource(id = R.string.video_processing))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
                 PreferenceSlider(
                     title = stringResource(id = R.string.video_sharpening),
                     description = stringResource(id = R.string.percent, (uiState.preferences.videoSharpening * 100).toInt()),
@@ -215,6 +240,8 @@ private fun PlayerPreferencesContent(
                     value = uiState.preferences.videoSharpening,
                     valueRange = PlayerPreferences.DEFAULT_VIDEO_SHARPENING..PlayerPreferences.MAX_VIDEO_SHARPENING,
                     onValueChange = { onEvent(PlayerPreferencesUiEvent.UpdateVideoSharpening(it)) },
+                    isFirstItem = true,
+                    isLastItem = true,
                     trailingContent = {
                         FilledIconButton(onClick = { onEvent(PlayerPreferencesUiEvent.UpdateVideoSharpening(PlayerPreferences.DEFAULT_VIDEO_SHARPENING)) }) {
                             Icon(
@@ -223,15 +250,6 @@ private fun PlayerPreferencesContent(
                             )
                         }
                     },
-                )
-                ClickablePreferenceItem(
-                    title = stringResource(id = R.string.player_screen_orientation),
-                    description = uiState.preferences.playerScreenOrientation.name(),
-                    icon = NextIcons.Rotation,
-                    onClick = {
-                        onEvent(PlayerPreferencesUiEvent.ShowDialog(PlayerPreferenceDialog.PlayerScreenOrientationDialog))
-                    },
-                    isLastItem = true,
                 )
             }
         }

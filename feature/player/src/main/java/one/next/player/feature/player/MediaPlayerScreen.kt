@@ -228,7 +228,12 @@ internal fun MediaPlayerScreen(
         if (playerPreferences.shouldRememberPlayerVolume && restoredVolumeMediaItemIndex != player.currentMediaItemIndex) {
             restoredVolumeMediaItemIndex = player.currentMediaItemIndex
             val restoredVolumePercentage = playerPreferences.playerVolumePercentage
-                .coerceAtMost(PlayerPreferences.MAX_PLAYER_INITIAL_VOLUME_PERCENTAGE)
+                .coerceAtMost(playerPreferences.maxInitialPlayerVolumePercentage)
+            Logger.debug(
+                TAG,
+                "Restore player volume: saved=${playerPreferences.playerVolumePercentage}, " +
+                    "limit=${playerPreferences.maxInitialPlayerVolumePercentage}, applied=$restoredVolumePercentage",
+            )
             volumeState.updateVolumePercentage(restoredVolumePercentage)
             pendingRestoredVolumePercentage = volumeState.volumePercentage
         }
