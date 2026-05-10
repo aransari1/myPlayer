@@ -172,6 +172,7 @@
     <string name="playback_behavior">播放行為</string>
     <string name="video_processing">畫面處理</string>
     <string name="video_filters">影片濾鏡</string>
+    <string name="video_filters_unavailable_software_decoder">軟體解碼不支援影片濾鏡</string>
     <string name="video_filters_default">預設</string>
     <string name="video_filters_adjusted_count">已調整 %1$d 項</string>
     <string name="fast_seek">快速跳轉</string>

@@ -37,7 +37,6 @@ import androidx.media3.effect.Brightness
 import androidx.media3.effect.Contrast
 import androidx.media3.effect.HslAdjustment
 import androidx.media3.effect.SingleColorLut
-import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
@@ -138,6 +137,7 @@ import one.next.player.feature.player.extensions.copy
 import one.next.player.feature.player.extensions.getManuallySelectedTrackIndex
 import one.next.player.feature.player.extensions.getSubtitleMime
 import one.next.player.feature.player.extensions.isApproximateSeekEnabled
+import one.next.player.feature.player.extensions.isVideoEffectsAvailable
 import one.next.player.feature.player.extensions.localParentPath
 import one.next.player.feature.player.extensions.positionMs
 import one.next.player.feature.player.extensions.remoteDirectoryPath
@@ -271,7 +271,10 @@ class PlayerService : MediaSessionService() {
     private var pendingPreciseSeekPromotionJob: Job? = null
     private var pendingStartupPreciseResumeToken: String? = null
     private var activeDecoderPriority: DecoderPriority = DecoderPriority.PREFER_DEVICE
-    private var currentVideoFilters = VideoFilterPreferences.default()
+    private var currentVideoEffectsState = VideoEffectsState(
+        filters = VideoFilterPreferences.default(),
+        decoderPriority = DecoderPriority.PREFER_DEVICE,
+    )
     private var pendingVideoFiltersJob: Job? = null
     private var cachedGamma: Float? = null
     private var cachedGammaEffect: Effect? = null
@@ -392,6 +395,7 @@ class PlayerService : MediaSessionService() {
             pendingStartupPreciseResumeToken = null
             isMediaItemReady = false
             isPendingExternalSubAutoSelect = false
+            updateCurrentVideoEffectsAvailability(mediaSession?.player as? ExoPlayer ?: return)
             if (mediaItem != null) {
                 serviceScope.launch {
                     val playbackStateUri = mediaItem.resolvePlaybackStateUri()
@@ -578,7 +582,6 @@ class PlayerService : MediaSessionService() {
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             super.onPlaybackStateChanged(playbackState)
-
             if (playbackState == Player.STATE_IDLE) {
                 val player = mediaSession?.player ?: return
                 player.trackSelectionParameters = TrackSelectionParameters.DEFAULT
@@ -647,6 +650,7 @@ class PlayerService : MediaSessionService() {
                 videoWidth = width,
                 videoHeight = height,
                 videoRotation = rotation,
+                isVideoEffectsAvailable = shouldApplyVideoEffects(activeDecoderPriority),
             )
             player.replaceMediaItem(
                 player.currentMediaItemIndex,
@@ -749,6 +753,7 @@ class PlayerService : MediaSessionService() {
             mediaItemIndex = currentIndex,
             positionMs = playbackPosition,
         )
+        updateCurrentVideoEffectsAvailability(retryPlayer)
         return true
     }
 
@@ -778,7 +783,7 @@ class PlayerService : MediaSessionService() {
         val exoError = error as? ExoPlaybackException ?: return false
         if (exoError.type != ExoPlaybackException.TYPE_RENDERER) return false
         if (exoError.rendererFormat?.sampleMimeType?.startsWith("video/") != true) return false
-        val rendererException = exoError.rendererException ?: return false
+        val rendererException = exoError.rendererException
         if (rendererException !is MediaCodecRenderer.DecoderInitializationException && rendererException.cause == null) return false
         return true
     }
@@ -1134,15 +1139,15 @@ class PlayerService : MediaSessionService() {
     ) {
         val videoFilters = preferences.toVideoFilterPreferences()
         pendingVideoFiltersJob?.cancel()
-        if (currentVideoFilters == videoFilters) return
+        if (currentVideoEffectsState == VideoEffectsState(videoFilters, activeDecoderPriority)) return
 
         pendingVideoFiltersJob = serviceScope.launch {
             val effects = withContext(Dispatchers.Default) {
-                videoFilters.toVideoEffects()
+                videoFilters.toVideoEffects(activeDecoderPriority)
             }
             if (preferencesRepository.playerPreferences.value.toVideoFilterPreferences() != videoFilters) return@launch
 
-            applyVideoEffects(player, videoFilters, effects)
+            applyVideoEffects(player, videoFilters, activeDecoderPriority, effects)
             Logger.debug(TAG, "Apply video filters: $videoFilters effects=${effects.size}")
         }.also { job ->
             job.invokeOnCompletion {
@@ -1155,13 +1160,13 @@ class PlayerService : MediaSessionService() {
         val player = mediaSession?.player as? ExoPlayer ?: return
         val videoFilters = preferences.toVideoFilterPreferences()
         pendingVideoFiltersJob?.cancel()
-        if (currentVideoFilters == videoFilters) return
+        if (currentVideoEffectsState == VideoEffectsState(videoFilters, activeDecoderPriority)) return
 
         pendingVideoFiltersJob = serviceScope.launch {
             val effects = withContext(Dispatchers.Default) {
-                videoFilters.toVideoEffects()
+                videoFilters.toVideoEffects(activeDecoderPriority)
             }
-            applyVideoEffects(player, videoFilters, effects)
+            applyVideoEffects(player, videoFilters, activeDecoderPriority, effects)
             Logger.debug(TAG, "Preview video filters: $videoFilters effects=${effects.size}")
         }.also { job ->
             job.invokeOnCompletion {
@@ -1173,10 +1178,24 @@ class PlayerService : MediaSessionService() {
     private fun applyVideoEffects(
         player: ExoPlayer,
         videoFilters: VideoFilterPreferences,
+        decoderPriority: DecoderPriority,
         effects: List<Effect>,
     ) {
-        currentVideoFilters = videoFilters
+        currentVideoEffectsState = VideoEffectsState(videoFilters, decoderPriority)
         player.setVideoEffects(effects)
+        updateCurrentVideoEffectsAvailability(player)
+    }
+
+    private fun updateCurrentVideoEffectsAvailability(player: ExoPlayer) {
+        val currentMediaItem = player.currentMediaItem ?: return
+        val isVideoEffectsAvailable = shouldApplyVideoEffects(activeDecoderPriority)
+        if (currentMediaItem.mediaMetadata.isVideoEffectsAvailable == isVideoEffectsAvailable) return
+
+        player.replaceMediaItem(
+            player.currentMediaItemIndex,
+            currentMediaItem.copy(isVideoEffectsAvailable = isVideoEffectsAvailable),
+        )
+        Logger.debug(TAG, "Video effects availability: available=$isVideoEffectsAvailable decoder=$activeDecoderPriority")
     }
 
     private fun PlayerPreferences.toVideoFilterPreferences(): VideoFilterPreferences = VideoFilterPreferences(
@@ -1197,7 +1216,8 @@ class PlayerService : MediaSessionService() {
         videoSharpening = getFloat(CustomCommands.VIDEO_SHARPENING_KEY, PlayerPreferences.DEFAULT_VIDEO_SHARPENING),
     )
 
-    private suspend fun VideoFilterPreferences.toVideoEffects(): List<Effect> = buildList {
+    private suspend fun VideoFilterPreferences.toVideoEffects(decoderPriority: DecoderPriority): List<Effect> = buildList {
+        if (!shouldApplyVideoEffects(decoderPriority)) return@buildList
         if (brightness != PlayerPreferences.DEFAULT_VIDEO_BRIGHTNESS) add(Brightness(brightness))
         if (contrast != PlayerPreferences.DEFAULT_VIDEO_CONTRAST) add(Contrast(contrast))
         if (saturation != PlayerPreferences.DEFAULT_VIDEO_SATURATION || hue != PlayerPreferences.DEFAULT_VIDEO_HUE) {
@@ -1494,13 +1514,7 @@ class PlayerService : MediaSessionService() {
             volumeNormalizationAudioProcessor = volumeNormalizationAudioProcessor,
         )
             .setEnableDecoderFallback(true)
-            .setExtensionRendererMode(
-                when (decoderPriority) {
-                    DecoderPriority.DEVICE_ONLY -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
-                    DecoderPriority.PREFER_DEVICE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
-                    DecoderPriority.PREFER_APP -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-                },
-            )
+            .setExtensionRendererMode(decoderPriority.extensionRendererMode())
 
         val preferences = playerPreferences
         val trackSelector = DefaultTrackSelector(applicationContext).apply {
@@ -1534,7 +1548,10 @@ class PlayerService : MediaSessionService() {
                     LoopMode.ONE -> Player.REPEAT_MODE_ONE
                     LoopMode.ALL -> Player.REPEAT_MODE_ALL
                 }
-                currentVideoFilters = VideoFilterPreferences.default()
+                currentVideoEffectsState = VideoEffectsState(
+                    filters = VideoFilterPreferences.default(),
+                    decoderPriority = activeDecoderPriority,
+                )
                 applyVideoFilters(it, preferences)
             }
     }
@@ -1544,7 +1561,10 @@ class PlayerService : MediaSessionService() {
         serviceScope.launch(Dispatchers.IO) { warmUpCodecCache() }
         serviceScope.launch {
             preferencesRepository.playerPreferences
-                .distinctUntilChanged { old, new -> old.toVideoFilterPreferences() == new.toVideoFilterPreferences() }
+                .distinctUntilChanged { old, new ->
+                    old.toVideoFilterPreferences() == new.toVideoFilterPreferences() &&
+                        old.decoderPriority == new.decoderPriority
+                }
                 .collect(::applyVideoFilters)
         }
         serviceScope.launch {
@@ -1803,6 +1823,7 @@ class PlayerService : MediaSessionService() {
                                 videoWidth = videoWidth,
                                 videoHeight = videoHeight,
                                 isApproximateSeekEnabled = isApproximateSeekEnabled,
+                                isVideoEffectsAvailable = shouldApplyVideoEffects(activeDecoderPriority),
                                 requestHeaders = mediaItem.mediaMetadata.requestHeaders,
                                 remoteServerId = mediaItem.mediaMetadata.remoteServerId,
                                 remoteFilePath = mediaItem.mediaMetadata.remoteFilePath,

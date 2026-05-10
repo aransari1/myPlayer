@@ -15,6 +15,7 @@ private const val MEDIA_METADATA_VIDEO_WIDTH_KEY = "media_metadata_video_width"
 private const val MEDIA_METADATA_VIDEO_HEIGHT_KEY = "media_metadata_video_height"
 private const val MEDIA_METADATA_VIDEO_ROTATION_KEY = "media_metadata_video_rotation"
 private const val MEDIA_METADATA_APPROXIMATE_SEEK_ENABLED_KEY = "media_metadata_approximate_seek_enabled"
+private const val MEDIA_METADATA_VIDEO_EFFECTS_AVAILABLE_KEY = "media_metadata_video_effects_available"
 private const val MEDIA_METADATA_REQUEST_HEADERS_PREFIX = "media_metadata_request_header_"
 private const val MEDIA_METADATA_REMOTE_SERVER_ID_KEY = "media_metadata_remote_server_id"
 private const val MEDIA_METADATA_REMOTE_FILE_PATH_KEY = "media_metadata_remote_file_path"
@@ -34,6 +35,7 @@ private fun Bundle.setExtras(
     videoHeight: Int? = null,
     videoRotation: Int? = null,
     isApproximateSeekEnabled: Boolean? = null,
+    isVideoEffectsAvailable: Boolean? = null,
     remoteServerId: Long? = null,
     remoteFilePath: String? = null,
     remoteProtocol: String? = null,
@@ -51,6 +53,7 @@ private fun Bundle.setExtras(
     videoHeight?.let { putInt(MEDIA_METADATA_VIDEO_HEIGHT_KEY, it) }
     videoRotation?.let { putInt(MEDIA_METADATA_VIDEO_ROTATION_KEY, it) }
     isApproximateSeekEnabled?.let { putBoolean(MEDIA_METADATA_APPROXIMATE_SEEK_ENABLED_KEY, it) }
+    isVideoEffectsAvailable?.let { putBoolean(MEDIA_METADATA_VIDEO_EFFECTS_AVAILABLE_KEY, it) }
     remoteServerId?.let { putLong(MEDIA_METADATA_REMOTE_SERVER_ID_KEY, it) }
     remoteFilePath?.let { putString(MEDIA_METADATA_REMOTE_FILE_PATH_KEY, it) }
     remoteProtocol?.let { putString(MEDIA_METADATA_REMOTE_PROTOCOL_KEY, it) }
@@ -70,6 +73,7 @@ fun MediaMetadata.Builder.setExtras(
     videoHeight: Int? = null,
     videoRotation: Int? = null,
     isApproximateSeekEnabled: Boolean? = null,
+    isVideoEffectsAvailable: Boolean? = null,
     requestHeaders: Map<String, String> = emptyMap(),
     remoteServerId: Long? = null,
     remoteFilePath: String? = null,
@@ -89,6 +93,7 @@ fun MediaMetadata.Builder.setExtras(
         videoHeight = videoHeight,
         videoRotation = videoRotation,
         isApproximateSeekEnabled = isApproximateSeekEnabled,
+        isVideoEffectsAvailable = isVideoEffectsAvailable,
         remoteServerId = remoteServerId,
         remoteFilePath = remoteFilePath,
         remoteProtocol = remoteProtocol,
@@ -164,6 +169,9 @@ val MediaMetadata.videoRotation: Int?
 val MediaMetadata.isApproximateSeekEnabled: Boolean
     get() = extras?.getBoolean(MEDIA_METADATA_APPROXIMATE_SEEK_ENABLED_KEY, false) == true
 
+val MediaMetadata.isVideoEffectsAvailable: Boolean
+    get() = extras?.getBoolean(MEDIA_METADATA_VIDEO_EFFECTS_AVAILABLE_KEY, true) != false
+
 val MediaMetadata.requestHeaders: Map<String, String>
     get() = extras?.keySet()
         ?.filter { it.startsWith(MEDIA_METADATA_REQUEST_HEADERS_PREFIX) }
@@ -208,6 +216,7 @@ fun MediaItem.copy(
     videoHeight: Int? = this.mediaMetadata.videoHeight,
     videoRotation: Int? = this.mediaMetadata.videoRotation,
     isApproximateSeekEnabled: Boolean? = this.mediaMetadata.isApproximateSeekEnabled,
+    isVideoEffectsAvailable: Boolean? = this.mediaMetadata.isVideoEffectsAvailable,
     requestHeaders: Map<String, String> = this.mediaMetadata.requestHeaders,
     remoteServerId: Long? = this.mediaMetadata.remoteServerId,
     remoteFilePath: String? = this.mediaMetadata.remoteFilePath,
@@ -230,6 +239,7 @@ fun MediaItem.copy(
                 videoHeight = videoHeight,
                 videoRotation = videoRotation,
                 isApproximateSeekEnabled = isApproximateSeekEnabled,
+                isVideoEffectsAvailable = isVideoEffectsAvailable,
                 remoteServerId = remoteServerId,
                 remoteFilePath = remoteFilePath,
                 remoteProtocol = remoteProtocol,

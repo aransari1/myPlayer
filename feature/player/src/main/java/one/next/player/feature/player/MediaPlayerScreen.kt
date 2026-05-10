@@ -304,6 +304,14 @@ internal fun MediaPlayerScreen(
     var shouldShowOverlay by remember { mutableStateOf(false) }
     var isSleepTimerDialogShown by remember { mutableStateOf(false) }
     var isVideoFiltersDialogShown by remember { mutableStateOf(false) }
+    val videoFiltersUnavailableMessage = stringResource(coreUiR.string.video_filters_unavailable_software_decoder)
+    val showVideoFilters = {
+        if (metadataState.isVideoEffectsAvailable) {
+            isVideoFiltersDialogShown = true
+        } else {
+            Toast.makeText(context, videoFiltersUnavailableMessage, Toast.LENGTH_SHORT).show()
+        }
+    }
     var longPressOverlayAnimationStep by remember { mutableIntStateOf(0) }
     val keyboardInteractionEnabledState = rememberUpdatedState(
         overlayView == null &&
@@ -808,7 +816,7 @@ internal fun MediaPlayerScreen(
                                             toggleControlVisibility(PlayerControl.VIDEO_FILTERS)
                                         } else {
                                             controlsVisibilityState.hideControls()
-                                            isVideoFiltersDialogShown = true
+                                            showVideoFilters()
                                         }
                                     },
                                     onPictureInPictureClick = {
@@ -911,7 +919,7 @@ internal fun MediaPlayerScreen(
                 onVideoContentScaleChanged = { videoZoomAndContentScaleState.onVideoContentScaleChanged(it) },
                 onShowVideoFilters = {
                     overlayView = null
-                    isVideoFiltersDialogShown = true
+                    showVideoFilters()
                 },
             )
         }

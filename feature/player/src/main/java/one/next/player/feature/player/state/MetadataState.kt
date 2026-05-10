@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.media3.common.Player
 import androidx.media3.common.listen
+import one.next.player.feature.player.extensions.isVideoEffectsAvailable
 
 @Composable
 fun rememberMetadataState(player: Player): MetadataState {
@@ -22,12 +23,25 @@ class MetadataState(private val player: Player) {
     var title: String? by mutableStateOf(null)
         private set
 
+    var isVideoEffectsAvailable: Boolean by mutableStateOf(true)
+        private set
+
     suspend fun observe() {
-        title = player.mediaMetadata.title?.toString()
+        updateFromPlayer()
         player.listen { events ->
-            if (events.containsAny(Player.EVENT_MEDIA_METADATA_CHANGED, Player.EVENT_MEDIA_ITEM_TRANSITION)) {
-                title = player.mediaMetadata.title?.toString()
+            if (events.containsAny(
+                    Player.EVENT_MEDIA_METADATA_CHANGED,
+                    Player.EVENT_MEDIA_ITEM_TRANSITION,
+                    Player.EVENT_TIMELINE_CHANGED,
+                )
+            ) {
+                updateFromPlayer()
             }
         }
+    }
+
+    private fun updateFromPlayer() {
+        title = player.mediaMetadata.title?.toString()
+        isVideoEffectsAvailable = player.mediaMetadata.isVideoEffectsAvailable
     }
 }
