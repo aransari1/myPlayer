@@ -1,12 +1,18 @@
-- 修复部分视频音轨只显示停用、没有声音的问题
-- 修复记住音量后增强音量恢复会被旧初始上限压回的问题
-- 提升视频打开速度，并减少首开时的加载遮挡
+- 修复视频滤镜有时拖动后画面不变化的问题
+- 修复锐化滤镜看起来无效的问题
+- 修复降低 Gamma 时播放器可能卡住或崩溃的问题
+- 修复自定义播放器按钮移到顶部或底部后点击无效的问题
+- 修复暂停视频一段时间后画面变黑的问题
+- 视频滤镜面板新增一键重置
 
 <details>
 <summary>English Version</summary>
 
-- Fix some videos showing only disabled audio tracks with no sound
-- Fix remembered boosted volume being capped by the old initial volume limit
-- Improve video opening speed and reduce the initial loading overlay
+- Fix video filters sometimes not changing the picture after adjustment
+- Fix the sharpening filter appearing to have no effect
+- Fix the player potentially freezing or crashing when lowering gamma
+- Fix customized player buttons becoming unresponsive after moving them to the top or bottom
+- Fix the video going black after being paused for a while
+- Add a reset button to the video filters panel
 
 </details>
