@@ -67,6 +67,7 @@ import one.next.player.core.ui.extensions.withBottomFallback
 @Composable
 fun AboutPreferencesScreen(
     onLibrariesClick: () -> Unit,
+    onLogsClick: () -> Unit,
     onNavigateUp: () -> Unit,
     viewModel: AboutPreferencesViewModel = hiltViewModel(),
 ) {
@@ -104,6 +105,9 @@ fun AboutPreferencesScreen(
             AboutApp(
                 onLibrariesClick = onLibrariesClick,
             )
+            DiagnosticsSection(
+                onLogsClick = onLogsClick,
+            )
             UpdateSection(
                 uiState = uiState,
                 currentVersionName = currentVersionName,
@@ -133,6 +137,26 @@ fun AboutPreferencesScreen(
         StartupUpdateDialog(
             uiState = uiState,
             onEvent = viewModel::onEvent,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun DiagnosticsSection(
+    onLogsClick: () -> Unit,
+) {
+    ListSectionTitle(text = stringResource(id = R.string.diagnostics))
+    Column(
+        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+    ) {
+        ClickablePreferenceItem(
+            title = stringResource(R.string.app_logs),
+            description = stringResource(R.string.app_logs_description),
+            icon = NextIcons.BugReport,
+            onClick = onLogsClick,
+            isFirstItem = true,
+            isLastItem = true,
         )
     }
 }

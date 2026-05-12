@@ -7,9 +7,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navOptions
 import one.next.player.settings.screens.about.AboutPreferencesScreen
 import one.next.player.settings.screens.about.LibrariesScreen
+import one.next.player.settings.screens.about.LogsScreen
 
 const val aboutPreferencesNavigationRoute = "about_preferences_route"
 const val librariesNavigationRoute = "libraries_route"
+const val logsNavigationRoute = "logs_route"
 
 fun NavController.navigateToAboutPreferences(navOptions: NavOptions? = navOptions { launchSingleTop = true }) {
     this.navigate(aboutPreferencesNavigationRoute, navOptions)
@@ -19,13 +21,19 @@ fun NavController.navigateToLibraries(navOptions: NavOptions? = navOptions { lau
     this.navigate(librariesNavigationRoute, navOptions)
 }
 
+fun NavController.navigateToLogs(navOptions: NavOptions? = navOptions { launchSingleTop = true }) {
+    this.navigate(logsNavigationRoute, navOptions)
+}
+
 fun NavGraphBuilder.aboutPreferencesScreen(
     onLibrariesClick: () -> Unit,
+    onLogsClick: () -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     composable(route = aboutPreferencesNavigationRoute) {
         AboutPreferencesScreen(
             onLibrariesClick = onLibrariesClick,
+            onLogsClick = onLogsClick,
             onNavigateUp = onNavigateUp,
         )
     }
@@ -36,6 +44,16 @@ fun NavGraphBuilder.librariesScreen(
 ) {
     composable(route = librariesNavigationRoute) {
         LibrariesScreen(
+            onNavigateUp = onNavigateUp,
+        )
+    }
+}
+
+fun NavGraphBuilder.logsScreen(
+    onNavigateUp: () -> Unit,
+) {
+    composable(route = logsNavigationRoute) {
+        LogsScreen(
             onNavigateUp = onNavigateUp,
         )
     }

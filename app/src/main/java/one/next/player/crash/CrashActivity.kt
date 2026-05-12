@@ -10,7 +10,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,8 +21,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledIconButton
@@ -38,12 +35,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -67,6 +62,7 @@ import one.next.player.MainViewModel
 import one.next.player.core.common.extensions.applyPrivacyProtection
 import one.next.player.core.common.extensions.resolvePrivacyPreviewScrim
 import one.next.player.core.ui.R
+import one.next.player.core.ui.components.LogsSelectionContainer
 import one.next.player.core.ui.designsystem.NextIcons
 import one.next.player.core.ui.theme.OnePlayerTheme
 import one.next.player.shouldUseDarkTheme
@@ -323,28 +319,6 @@ private fun CrashScreen(
             LogsSelectionContainer(logs = logcat)
             Spacer(Modifier.height(8.dp))
         }
-    }
-}
-
-@Composable
-private fun LogsSelectionContainer(
-    logs: String,
-    modifier: Modifier = Modifier,
-) {
-    SelectionContainer(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(2.dp)
-            .horizontalScroll(rememberScrollState()),
-    ) {
-        Text(
-            text = logs,
-            fontFamily = FontFamily.Monospace,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(4.dp),
-        )
     }
 }
 

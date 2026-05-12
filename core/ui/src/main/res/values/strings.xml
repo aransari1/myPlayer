@@ -277,6 +277,16 @@
     <string name="loop_mode_one">Loop: One</string>
     <string name="loop_mode_all">Loop: All</string>
     <string name="libraries">Libraries</string>
+    <string name="diagnostics">Diagnostics</string>
+    <string name="app_logs">App logs</string>
+    <string name="app_logs_description">View, copy, clear, and export logs stored in the app private directory</string>
+    <string name="share_logs">Share logs</string>
+    <string name="copy_logs">Copy logs</string>
+    <string name="clear_logs">Clear logs</string>
+    <string name="no_logs">No logs yet</string>
+    <string name="logs_copied">Logs copied</string>
+    <string name="logs_cleared">Logs cleared</string>
+    <string name="logs_share_failed">Failed to share logs</string>
     <string name="device_info">Device info</string>
     <string name="architecture">Architecture</string>
     <string name="android_version">Android version</string>

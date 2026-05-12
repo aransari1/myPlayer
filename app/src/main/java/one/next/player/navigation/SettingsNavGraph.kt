@@ -12,6 +12,7 @@ import one.next.player.settings.navigation.folderPreferencesScreen
 import one.next.player.settings.navigation.generalPreferencesScreen
 import one.next.player.settings.navigation.gesturePreferencesScreen
 import one.next.player.settings.navigation.librariesScreen
+import one.next.player.settings.navigation.logsScreen
 import one.next.player.settings.navigation.mediaLibraryPreferencesScreen
 import one.next.player.settings.navigation.navigateToAboutPreferences
 import one.next.player.settings.navigation.navigateToAppearancePreferences
@@ -21,6 +22,7 @@ import one.next.player.settings.navigation.navigateToFolderPreferencesScreen
 import one.next.player.settings.navigation.navigateToGeneralPreferences
 import one.next.player.settings.navigation.navigateToGesturePreferences
 import one.next.player.settings.navigation.navigateToLibraries
+import one.next.player.settings.navigation.navigateToLogs
 import one.next.player.settings.navigation.navigateToMediaLibraryPreferencesScreen
 import one.next.player.settings.navigation.navigateToPlayerPreferences
 import one.next.player.settings.navigation.navigateToPrivacyPreferences
@@ -96,9 +98,13 @@ fun NavGraphBuilder.settingsNavGraph(
         )
         aboutPreferencesScreen(
             onLibrariesClick = navController::navigateToLibraries,
+            onLogsClick = navController::navigateToLogs,
             onNavigateUp = navController::navigateUp,
         )
         librariesScreen(
+            onNavigateUp = navController::navigateUp,
+        )
+        logsScreen(
             onNavigateUp = navController::navigateUp,
         )
     }
