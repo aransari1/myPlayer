@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import one.next.player.core.common.Logger
 import one.next.player.core.data.remote.SmbClient
 import one.next.player.core.data.remote.SmbClient.Companion.extractRelativePath
 import one.next.player.core.data.remote.SmbClient.Companion.extractShareName
@@ -283,7 +284,10 @@ class CloudDocumentsProvider : DocumentsProvider() {
 
     private fun listFiles(server: RemoteServer, path: String): List<RemoteFile> = when (server.protocol) {
         ServerProtocol.WEBDAV -> kotlinx.coroutines.runBlocking {
-            webDavClient.listDirectory(server, path).getOrElse { emptyList() }
+            webDavClient.listDirectory(server, path).getOrElse { exception ->
+                Logger.error(TAG, "Failed to list WebDAV directory", exception)
+                emptyList()
+            }
         }
         ServerProtocol.SMB -> listSmbDirectory(server, path)
     }
@@ -331,34 +335,40 @@ class CloudDocumentsProvider : DocumentsProvider() {
         }
 
         val client = SMBClient(config)
-        val connection = client.connect(server.host, server.port ?: SmbClient.DEFAULT_PORT)
-        val session = connection.authenticate(server.toSmbAuthContext())
-        val share = session.connectShare(shareName) as DiskShare
+        var connection: com.hierynomus.smbj.connection.Connection? = null
+        var session: com.hierynomus.smbj.session.Session? = null
+        var share: DiskShare? = null
+        try {
+            connection = client.connect(server.host, server.port ?: SmbClient.DEFAULT_PORT)
+            session = connection.authenticate(server.toSmbAuthContext())
+            share = session.connectShare(shareName) as DiskShare
+            val files = mutableListOf<RemoteFile>()
+            share.list(relativePath).forEach { info ->
+                val name = info.fileName
+                if (name == "." || name == "..") return@forEach
 
-        val files = mutableListOf<RemoteFile>()
-        share.list(relativePath).forEach { info ->
-            val name = info.fileName
-            if (name == "." || name == "..") return@forEach
-
-            val isDirectory = info.fileAttributes and FileAttributes.FILE_ATTRIBUTE_DIRECTORY.value != 0L
-            val fullPath = if (path.endsWith('/')) "$path$name" else "$path/$name"
-            files.add(
-                RemoteFile(
-                    name = name,
-                    path = if (isDirectory) "$fullPath/" else fullPath,
-                    isDirectory = isDirectory,
-                    size = info.endOfFile,
-                ),
-            )
+                val isDirectory = info.fileAttributes and FileAttributes.FILE_ATTRIBUTE_DIRECTORY.value != 0L
+                val fullPath = if (path.endsWith('/')) "$path$name" else "$path/$name"
+                files.add(
+                    RemoteFile(
+                        name = name,
+                        path = if (isDirectory) "$fullPath/" else fullPath,
+                        isDirectory = isDirectory,
+                        size = info.endOfFile,
+                    ),
+                )
+            }
+            files.sortedWith(compareByDescending<RemoteFile> { it.isDirectory }.thenBy { it.name })
+        } finally {
+            runCatching { share?.close() }
+            runCatching { session?.close() }
+            runCatching { connection?.close() }
+            runCatching { client.close() }
         }
-
-        share.close()
-        session.close()
-        connection.close()
-        client.close()
-
-        files.sortedWith(compareByDescending<RemoteFile> { it.isDirectory }.thenBy { it.name })
-    }.getOrDefault(emptyList())
+    }.getOrElse { exception ->
+        Logger.error(TAG, "Failed to list SMB directory", exception)
+        emptyList()
+    }
 
     private fun openWebDavDocument(
         server: RemoteServer,
@@ -391,12 +401,17 @@ class CloudDocumentsProvider : DocumentsProvider() {
         }
 
         Thread {
-            ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { output ->
-                body.byteStream().use { input ->
-                    input.copyTo(output)
+            try {
+                ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { output ->
+                    body.byteStream().use { input ->
+                        input.copyTo(output)
+                    }
                 }
+            } catch (exception: Exception) {
+                Logger.error(TAG, "Failed to stream WebDAV document", exception)
+            } finally {
+                response.close()
             }
-            response.close()
         }.start()
         return pipe[0]
     }
@@ -452,16 +467,21 @@ class CloudDocumentsProvider : DocumentsProvider() {
         }
 
         Thread {
-            ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { output ->
-                input.use { source ->
-                    source.copyTo(output)
+            try {
+                ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { output ->
+                    input.use { source ->
+                        source.copyTo(output)
+                    }
                 }
+            } catch (exception: Exception) {
+                Logger.error(TAG, "Failed to stream SMB document", exception)
+            } finally {
+                runCatching { file.close() }
+                runCatching { share.close() }
+                runCatching { session.close() }
+                runCatching { connection.close() }
+                runCatching { client.close() }
             }
-            file.close()
-            share.close()
-            session.close()
-            connection.close()
-            client.close()
         }.start()
         return pipe[0]
     }
@@ -574,6 +594,7 @@ class CloudDocumentsProvider : DocumentsProvider() {
     )
 
     companion object {
+        private const val TAG = "CloudDocumentsProvider"
         private const val ROOT_ID = "cloud"
         private const val ROOT_DOCUMENT_ID = "root"
         private const val ROOT_TITLE = "One Player"
