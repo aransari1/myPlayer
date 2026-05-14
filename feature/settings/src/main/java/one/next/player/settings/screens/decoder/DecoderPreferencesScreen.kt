@@ -2,6 +2,7 @@ package one.next.player.settings.screens.decoder
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
@@ -17,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -29,6 +31,7 @@ import one.next.player.core.model.PlayerPreferences
 import one.next.player.core.ui.R
 import one.next.player.core.ui.components.ClickablePreferenceItem
 import one.next.player.core.ui.components.ListSectionTitle
+import one.next.player.core.ui.components.NextSwitch
 import one.next.player.core.ui.components.NextTopAppBar
 import one.next.player.core.ui.components.PreferenceSlider
 import one.next.player.core.ui.components.PreferenceSwitch
@@ -155,15 +158,19 @@ private fun VideoFiltersSettings(
             description = signedPercent(preferences.videoBrightness),
             icon = NextIcons.Sensitivity,
             isEnabled = preferences.shouldApplyVideoFilters,
+            isSliderEnabled = preferences.shouldApplyVideoFilters && preferences.isVideoBrightnessFilterEnabled,
             value = preferences.videoBrightness,
             valueRange = PlayerPreferences.MIN_VIDEO_BRIGHTNESS..PlayerPreferences.MAX_VIDEO_BRIGHTNESS,
             onValueChange = { onEvent(DecoderPreferencesUiEvent.UpdateVideoBrightness(it)) },
             trailingContent = {
-                ResetVideoFilterButton(
-                    testTag = "btn_reset_settings_video_brightness",
-                    contentDescription = stringResource(id = R.string.reset_video_brightness),
+                VideoFilterActions(
+                    switchTestTag = "switch_settings_video_brightness",
+                    resetTestTag = "btn_reset_settings_video_brightness",
+                    resetContentDescription = stringResource(id = R.string.reset_video_brightness),
                     isEnabled = preferences.shouldApplyVideoFilters,
-                    onClick = { onEvent(DecoderPreferencesUiEvent.UpdateVideoBrightness(PlayerPreferences.DEFAULT_VIDEO_BRIGHTNESS)) },
+                    isChecked = preferences.isVideoBrightnessFilterEnabled,
+                    onToggle = { onEvent(DecoderPreferencesUiEvent.ToggleVideoBrightnessFilter) },
+                    onReset = { onEvent(DecoderPreferencesUiEvent.UpdateVideoBrightness(PlayerPreferences.DEFAULT_VIDEO_BRIGHTNESS)) },
                 )
             },
         )
@@ -174,15 +181,19 @@ private fun VideoFiltersSettings(
             description = signedPercent(preferences.videoContrast),
             icon = NextIcons.Sensitivity,
             isEnabled = preferences.shouldApplyVideoFilters,
+            isSliderEnabled = preferences.shouldApplyVideoFilters && preferences.isVideoContrastFilterEnabled,
             value = preferences.videoContrast,
             valueRange = PlayerPreferences.MIN_VIDEO_CONTRAST..PlayerPreferences.MAX_VIDEO_CONTRAST,
             onValueChange = { onEvent(DecoderPreferencesUiEvent.UpdateVideoContrast(it)) },
             trailingContent = {
-                ResetVideoFilterButton(
-                    testTag = "btn_reset_settings_video_contrast",
-                    contentDescription = stringResource(id = R.string.reset_video_contrast),
+                VideoFilterActions(
+                    switchTestTag = "switch_settings_video_contrast",
+                    resetTestTag = "btn_reset_settings_video_contrast",
+                    resetContentDescription = stringResource(id = R.string.reset_video_contrast),
                     isEnabled = preferences.shouldApplyVideoFilters,
-                    onClick = { onEvent(DecoderPreferencesUiEvent.UpdateVideoContrast(PlayerPreferences.DEFAULT_VIDEO_CONTRAST)) },
+                    isChecked = preferences.isVideoContrastFilterEnabled,
+                    onToggle = { onEvent(DecoderPreferencesUiEvent.ToggleVideoContrastFilter) },
+                    onReset = { onEvent(DecoderPreferencesUiEvent.UpdateVideoContrast(PlayerPreferences.DEFAULT_VIDEO_CONTRAST)) },
                 )
             },
         )
@@ -193,15 +204,19 @@ private fun VideoFiltersSettings(
             description = signedInteger(preferences.videoSaturation),
             icon = NextIcons.Sensitivity,
             isEnabled = preferences.shouldApplyVideoFilters,
+            isSliderEnabled = preferences.shouldApplyVideoFilters && preferences.isVideoSaturationFilterEnabled,
             value = preferences.videoSaturation,
             valueRange = PlayerPreferences.MIN_VIDEO_SATURATION..PlayerPreferences.MAX_VIDEO_SATURATION,
             onValueChange = { onEvent(DecoderPreferencesUiEvent.UpdateVideoSaturation(it)) },
             trailingContent = {
-                ResetVideoFilterButton(
-                    testTag = "btn_reset_settings_video_saturation",
-                    contentDescription = stringResource(id = R.string.reset_video_saturation),
+                VideoFilterActions(
+                    switchTestTag = "switch_settings_video_saturation",
+                    resetTestTag = "btn_reset_settings_video_saturation",
+                    resetContentDescription = stringResource(id = R.string.reset_video_saturation),
                     isEnabled = preferences.shouldApplyVideoFilters,
-                    onClick = { onEvent(DecoderPreferencesUiEvent.UpdateVideoSaturation(PlayerPreferences.DEFAULT_VIDEO_SATURATION)) },
+                    isChecked = preferences.isVideoSaturationFilterEnabled,
+                    onToggle = { onEvent(DecoderPreferencesUiEvent.ToggleVideoSaturationFilter) },
+                    onReset = { onEvent(DecoderPreferencesUiEvent.UpdateVideoSaturation(PlayerPreferences.DEFAULT_VIDEO_SATURATION)) },
                 )
             },
         )
@@ -212,15 +227,19 @@ private fun VideoFiltersSettings(
             description = stringResource(R.string.degrees, preferences.videoHue.toInt()),
             icon = NextIcons.Sensitivity,
             isEnabled = preferences.shouldApplyVideoFilters,
+            isSliderEnabled = preferences.shouldApplyVideoFilters && preferences.isVideoHueFilterEnabled,
             value = preferences.videoHue,
             valueRange = PlayerPreferences.MIN_VIDEO_HUE..PlayerPreferences.MAX_VIDEO_HUE,
             onValueChange = { onEvent(DecoderPreferencesUiEvent.UpdateVideoHue(it)) },
             trailingContent = {
-                ResetVideoFilterButton(
-                    testTag = "btn_reset_settings_video_hue",
-                    contentDescription = stringResource(id = R.string.reset_video_hue),
+                VideoFilterActions(
+                    switchTestTag = "switch_settings_video_hue",
+                    resetTestTag = "btn_reset_settings_video_hue",
+                    resetContentDescription = stringResource(id = R.string.reset_video_hue),
                     isEnabled = preferences.shouldApplyVideoFilters,
-                    onClick = { onEvent(DecoderPreferencesUiEvent.UpdateVideoHue(PlayerPreferences.DEFAULT_VIDEO_HUE)) },
+                    isChecked = preferences.isVideoHueFilterEnabled,
+                    onToggle = { onEvent(DecoderPreferencesUiEvent.ToggleVideoHueFilter) },
+                    onReset = { onEvent(DecoderPreferencesUiEvent.UpdateVideoHue(PlayerPreferences.DEFAULT_VIDEO_HUE)) },
                 )
             },
         )
@@ -231,15 +250,19 @@ private fun VideoFiltersSettings(
             description = String.format("%.2f", preferences.videoGamma),
             icon = NextIcons.Sensitivity,
             isEnabled = preferences.shouldApplyVideoFilters,
+            isSliderEnabled = preferences.shouldApplyVideoFilters && preferences.isVideoGammaFilterEnabled,
             value = preferences.videoGamma,
             valueRange = PlayerPreferences.MIN_VIDEO_GAMMA..PlayerPreferences.MAX_VIDEO_GAMMA,
             onValueChange = { onEvent(DecoderPreferencesUiEvent.UpdateVideoGamma(it)) },
             trailingContent = {
-                ResetVideoFilterButton(
-                    testTag = "btn_reset_settings_video_gamma",
-                    contentDescription = stringResource(id = R.string.reset_video_gamma),
+                VideoFilterActions(
+                    switchTestTag = "switch_settings_video_gamma",
+                    resetTestTag = "btn_reset_settings_video_gamma",
+                    resetContentDescription = stringResource(id = R.string.reset_video_gamma),
                     isEnabled = preferences.shouldApplyVideoFilters,
-                    onClick = { onEvent(DecoderPreferencesUiEvent.UpdateVideoGamma(PlayerPreferences.DEFAULT_VIDEO_GAMMA)) },
+                    isChecked = preferences.isVideoGammaFilterEnabled,
+                    onToggle = { onEvent(DecoderPreferencesUiEvent.ToggleVideoGammaFilter) },
+                    onReset = { onEvent(DecoderPreferencesUiEvent.UpdateVideoGamma(PlayerPreferences.DEFAULT_VIDEO_GAMMA)) },
                 )
             },
         )
@@ -250,16 +273,20 @@ private fun VideoFiltersSettings(
             description = stringResource(R.string.percent, (preferences.videoSharpening * 100).toInt()),
             icon = NextIcons.Sensitivity,
             isEnabled = preferences.shouldApplyVideoFilters,
+            isSliderEnabled = preferences.shouldApplyVideoFilters && preferences.isVideoSharpeningFilterEnabled,
             value = preferences.videoSharpening,
             valueRange = PlayerPreferences.DEFAULT_VIDEO_SHARPENING..PlayerPreferences.MAX_VIDEO_SHARPENING,
             onValueChange = { onEvent(DecoderPreferencesUiEvent.UpdateVideoSharpening(it)) },
             isLastItem = true,
             trailingContent = {
-                ResetVideoFilterButton(
-                    testTag = "btn_reset_settings_video_sharpening",
-                    contentDescription = stringResource(id = R.string.reset_video_sharpening),
+                VideoFilterActions(
+                    switchTestTag = "switch_settings_video_sharpening",
+                    resetTestTag = "btn_reset_settings_video_sharpening",
+                    resetContentDescription = stringResource(id = R.string.reset_video_sharpening),
                     isEnabled = preferences.shouldApplyVideoFilters,
-                    onClick = { onEvent(DecoderPreferencesUiEvent.UpdateVideoSharpening(PlayerPreferences.DEFAULT_VIDEO_SHARPENING)) },
+                    isChecked = preferences.isVideoSharpeningFilterEnabled,
+                    onToggle = { onEvent(DecoderPreferencesUiEvent.ToggleVideoSharpeningFilter) },
+                    onReset = { onEvent(DecoderPreferencesUiEvent.UpdateVideoSharpening(PlayerPreferences.DEFAULT_VIDEO_SHARPENING)) },
                 )
             },
         )
@@ -267,21 +294,35 @@ private fun VideoFiltersSettings(
 }
 
 @Composable
-private fun ResetVideoFilterButton(
-    testTag: String,
-    contentDescription: String,
+private fun VideoFilterActions(
+    switchTestTag: String,
+    resetTestTag: String,
+    resetContentDescription: String,
     isEnabled: Boolean,
-    onClick: () -> Unit,
+    isChecked: Boolean,
+    onToggle: () -> Unit,
+    onReset: () -> Unit,
 ) {
-    FilledIconButton(
-        modifier = Modifier.testTag(testTag),
-        enabled = isEnabled,
-        onClick = onClick,
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = NextIcons.History,
-            contentDescription = contentDescription,
+        NextSwitch(
+            modifier = Modifier.testTag(switchTestTag),
+            isChecked = isChecked,
+            onCheckedChange = { onToggle() },
+            isEnabled = isEnabled,
         )
+        FilledIconButton(
+            modifier = Modifier.testTag(resetTestTag),
+            enabled = isEnabled,
+            onClick = onReset,
+        ) {
+            Icon(
+                imageVector = NextIcons.History,
+                contentDescription = resetContentDescription,
+            )
+        }
     }
 }
 

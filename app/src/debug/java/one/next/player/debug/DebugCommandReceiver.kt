@@ -119,16 +119,40 @@ class DebugCommandReceiver : BroadcastReceiver() {
         preferencesRepository.updatePlayerPreferences { preferences ->
             preferences.copy(
                 shouldApplyVideoFilters = intent.getBooleanExtra(EXTRA_ENABLED, preferences.shouldApplyVideoFilters),
+                isVideoBrightnessFilterEnabled = intent.getBooleanExtra(
+                    EXTRA_BRIGHTNESS_ENABLED,
+                    preferences.isVideoBrightnessFilterEnabled,
+                ),
                 videoBrightness = intent.getFloatExtra(EXTRA_BRIGHTNESS, preferences.videoBrightness)
                     .coerceIn(PlayerPreferences.MIN_VIDEO_BRIGHTNESS, PlayerPreferences.MAX_VIDEO_BRIGHTNESS),
+                isVideoContrastFilterEnabled = intent.getBooleanExtra(
+                    EXTRA_CONTRAST_ENABLED,
+                    preferences.isVideoContrastFilterEnabled,
+                ),
                 videoContrast = intent.getFloatExtra(EXTRA_CONTRAST, preferences.videoContrast)
                     .coerceIn(PlayerPreferences.MIN_VIDEO_CONTRAST, PlayerPreferences.MAX_VIDEO_CONTRAST),
+                isVideoSaturationFilterEnabled = intent.getBooleanExtra(
+                    EXTRA_SATURATION_ENABLED,
+                    preferences.isVideoSaturationFilterEnabled,
+                ),
                 videoSaturation = intent.getFloatExtra(EXTRA_SATURATION, preferences.videoSaturation)
                     .coerceIn(PlayerPreferences.MIN_VIDEO_SATURATION, PlayerPreferences.MAX_VIDEO_SATURATION),
+                isVideoHueFilterEnabled = intent.getBooleanExtra(
+                    EXTRA_HUE_ENABLED,
+                    preferences.isVideoHueFilterEnabled,
+                ),
                 videoHue = intent.getFloatExtra(EXTRA_HUE, preferences.videoHue)
                     .coerceIn(PlayerPreferences.MIN_VIDEO_HUE, PlayerPreferences.MAX_VIDEO_HUE),
+                isVideoGammaFilterEnabled = intent.getBooleanExtra(
+                    EXTRA_GAMMA_ENABLED,
+                    preferences.isVideoGammaFilterEnabled,
+                ),
                 videoGamma = intent.getFloatExtra(EXTRA_GAMMA, preferences.videoGamma)
                     .coerceIn(PlayerPreferences.MIN_VIDEO_GAMMA, PlayerPreferences.MAX_VIDEO_GAMMA),
+                isVideoSharpeningFilterEnabled = intent.getBooleanExtra(
+                    EXTRA_SHARPENING_ENABLED,
+                    preferences.isVideoSharpeningFilterEnabled,
+                ),
                 videoSharpening = intent.getFloatExtra(EXTRA_SHARPENING, preferences.videoSharpening)
                     .coerceIn(PlayerPreferences.DEFAULT_VIDEO_SHARPENING, PlayerPreferences.MAX_VIDEO_SHARPENING),
             )
@@ -256,11 +280,17 @@ class DebugCommandReceiver : BroadcastReceiver() {
         const val EXTRA_ENABLED = "enabled"
         const val EXTRA_URL = "url"
         const val EXTRA_SECONDS = "seconds"
+        const val EXTRA_BRIGHTNESS_ENABLED = "brightness_enabled"
         const val EXTRA_BRIGHTNESS = "brightness"
+        const val EXTRA_CONTRAST_ENABLED = "contrast_enabled"
         const val EXTRA_CONTRAST = "contrast"
+        const val EXTRA_SATURATION_ENABLED = "saturation_enabled"
         const val EXTRA_SATURATION = "saturation"
+        const val EXTRA_HUE_ENABLED = "hue_enabled"
         const val EXTRA_HUE = "hue"
+        const val EXTRA_GAMMA_ENABLED = "gamma_enabled"
         const val EXTRA_GAMMA = "gamma"
+        const val EXTRA_SHARPENING_ENABLED = "sharpening_enabled"
         const val EXTRA_SHARPENING = "sharpening"
     }
 }

@@ -101,6 +101,7 @@ private fun BoxScope.VideoFilterOverlayView(
         testTag = "panel_video_filters",
     ) {
         VideoFiltersPanel(
+            modifier = Modifier.weight(1f),
             preferences = preferences,
             onDismissRequest = onDismissRequest,
             onPreviewPreferences = onPreviewPreferences,

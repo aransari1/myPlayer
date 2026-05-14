@@ -1225,23 +1225,59 @@ class PlayerService : MediaSessionService() {
 
         val filters = VideoFilterPreferences(
             shouldApply = true,
-            brightness = videoBrightness.coerceIn(PlayerPreferences.MIN_VIDEO_BRIGHTNESS, PlayerPreferences.MAX_VIDEO_BRIGHTNESS),
-            contrast = videoContrast.coerceIn(PlayerPreferences.MIN_VIDEO_CONTRAST, PlayerPreferences.MAX_VIDEO_CONTRAST),
-            saturation = videoSaturation.coerceIn(PlayerPreferences.MIN_VIDEO_SATURATION, PlayerPreferences.MAX_VIDEO_SATURATION),
-            hue = videoHue.coerceIn(PlayerPreferences.MIN_VIDEO_HUE, PlayerPreferences.MAX_VIDEO_HUE),
-            gamma = videoGamma.coerceIn(PlayerPreferences.MIN_VIDEO_GAMMA, PlayerPreferences.MAX_VIDEO_GAMMA),
-            sharpening = videoSharpening.coerceIn(PlayerPreferences.DEFAULT_VIDEO_SHARPENING, PlayerPreferences.MAX_VIDEO_SHARPENING),
+            isBrightnessEnabled = isVideoBrightnessFilterEnabled,
+            brightness = if (isVideoBrightnessFilterEnabled) {
+                videoBrightness.coerceIn(PlayerPreferences.MIN_VIDEO_BRIGHTNESS, PlayerPreferences.MAX_VIDEO_BRIGHTNESS)
+            } else {
+                PlayerPreferences.DEFAULT_VIDEO_BRIGHTNESS
+            },
+            isContrastEnabled = isVideoContrastFilterEnabled,
+            contrast = if (isVideoContrastFilterEnabled) {
+                videoContrast.coerceIn(PlayerPreferences.MIN_VIDEO_CONTRAST, PlayerPreferences.MAX_VIDEO_CONTRAST)
+            } else {
+                PlayerPreferences.DEFAULT_VIDEO_CONTRAST
+            },
+            isSaturationEnabled = isVideoSaturationFilterEnabled,
+            saturation = if (isVideoSaturationFilterEnabled) {
+                videoSaturation.coerceIn(PlayerPreferences.MIN_VIDEO_SATURATION, PlayerPreferences.MAX_VIDEO_SATURATION)
+            } else {
+                PlayerPreferences.DEFAULT_VIDEO_SATURATION
+            },
+            isHueEnabled = isVideoHueFilterEnabled,
+            hue = if (isVideoHueFilterEnabled) {
+                videoHue.coerceIn(PlayerPreferences.MIN_VIDEO_HUE, PlayerPreferences.MAX_VIDEO_HUE)
+            } else {
+                PlayerPreferences.DEFAULT_VIDEO_HUE
+            },
+            isGammaEnabled = isVideoGammaFilterEnabled,
+            gamma = if (isVideoGammaFilterEnabled) {
+                videoGamma.coerceIn(PlayerPreferences.MIN_VIDEO_GAMMA, PlayerPreferences.MAX_VIDEO_GAMMA)
+            } else {
+                PlayerPreferences.DEFAULT_VIDEO_GAMMA
+            },
+            isSharpeningEnabled = isVideoSharpeningFilterEnabled,
+            sharpening = if (isVideoSharpeningFilterEnabled) {
+                videoSharpening.coerceIn(PlayerPreferences.DEFAULT_VIDEO_SHARPENING, PlayerPreferences.MAX_VIDEO_SHARPENING)
+            } else {
+                PlayerPreferences.DEFAULT_VIDEO_SHARPENING
+            },
         )
         return if (filters.shouldCreateEffect()) filters else VideoFilterPreferences.default()
     }
 
-    private fun Bundle.toVideoFilterPreferences(): PlayerPreferences = PlayerPreferences(
+    private fun Bundle.toPlayerPreferences(): PlayerPreferences = PlayerPreferences(
         shouldApplyVideoFilters = getBoolean(CustomCommands.SHOULD_APPLY_VIDEO_FILTERS_KEY, false),
+        isVideoBrightnessFilterEnabled = getBoolean(CustomCommands.IS_VIDEO_BRIGHTNESS_FILTER_ENABLED_KEY, false),
         videoBrightness = getFloat(CustomCommands.VIDEO_BRIGHTNESS_KEY, PlayerPreferences.DEFAULT_VIDEO_BRIGHTNESS),
+        isVideoContrastFilterEnabled = getBoolean(CustomCommands.IS_VIDEO_CONTRAST_FILTER_ENABLED_KEY, false),
         videoContrast = getFloat(CustomCommands.VIDEO_CONTRAST_KEY, PlayerPreferences.DEFAULT_VIDEO_CONTRAST),
+        isVideoSaturationFilterEnabled = getBoolean(CustomCommands.IS_VIDEO_SATURATION_FILTER_ENABLED_KEY, false),
         videoSaturation = getFloat(CustomCommands.VIDEO_SATURATION_KEY, PlayerPreferences.DEFAULT_VIDEO_SATURATION),
+        isVideoHueFilterEnabled = getBoolean(CustomCommands.IS_VIDEO_HUE_FILTER_ENABLED_KEY, false),
         videoHue = getFloat(CustomCommands.VIDEO_HUE_KEY, PlayerPreferences.DEFAULT_VIDEO_HUE),
+        isVideoGammaFilterEnabled = getBoolean(CustomCommands.IS_VIDEO_GAMMA_FILTER_ENABLED_KEY, false),
         videoGamma = getFloat(CustomCommands.VIDEO_GAMMA_KEY, PlayerPreferences.DEFAULT_VIDEO_GAMMA),
+        isVideoSharpeningFilterEnabled = getBoolean(CustomCommands.IS_VIDEO_SHARPENING_FILTER_ENABLED_KEY, false),
         videoSharpening = getFloat(CustomCommands.VIDEO_SHARPENING_KEY, PlayerPreferences.DEFAULT_VIDEO_SHARPENING),
     )
 
@@ -1437,7 +1473,7 @@ class PlayerService : MediaSessionService() {
                 }
 
                 CustomCommands.PREVIEW_VIDEO_FILTERS -> {
-                    previewVideoFilters(args.toVideoFilterPreferences())
+                    previewVideoFilters(args.toPlayerPreferences())
                     return@future SessionResult(SessionResult.RESULT_SUCCESS)
                 }
 

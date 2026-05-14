@@ -14,7 +14,18 @@ object PlayerPreferencesSerializer : Serializer<PlayerPreferences> {
 
     private const val LEGACY_DEFAULT_MAX_INITIAL_PLAYER_VOLUME_PERCENTAGE = 100
 
-    private val jsonFormat = Json { ignoreUnknownKeys = true }
+    private val jsonFormat = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
+    private val videoFilterEnabledKeys = setOf(
+        "isVideoBrightnessFilterEnabled",
+        "isVideoContrastFilterEnabled",
+        "isVideoSaturationFilterEnabled",
+        "isVideoHueFilterEnabled",
+        "isVideoGammaFilterEnabled",
+        "isVideoSharpeningFilterEnabled",
+    )
     private val legacyKeys = setOf(
         "applyEmbeddedStyles",
         "autoBackgroundPlay",
@@ -85,6 +96,28 @@ object PlayerPreferencesSerializer : Serializer<PlayerPreferences> {
 
         if ("shouldApplyVideoFilters" !in root && hasAdjustedVideoFilters()) {
             upgradedPreferences = upgradedPreferences.copy(shouldApplyVideoFilters = true)
+        }
+        if (!root.keys.containsAll(videoFilterEnabledKeys)) {
+            upgradedPreferences = upgradedPreferences.copy(
+                isVideoBrightnessFilterEnabled = upgradedPreferences.isVideoBrightnessFilterEnabled.takeIf {
+                    "isVideoBrightnessFilterEnabled" in root
+                } ?: (upgradedPreferences.videoBrightness != PlayerPreferences.DEFAULT_VIDEO_BRIGHTNESS),
+                isVideoContrastFilterEnabled = upgradedPreferences.isVideoContrastFilterEnabled.takeIf {
+                    "isVideoContrastFilterEnabled" in root
+                } ?: (upgradedPreferences.videoContrast != PlayerPreferences.DEFAULT_VIDEO_CONTRAST),
+                isVideoSaturationFilterEnabled = upgradedPreferences.isVideoSaturationFilterEnabled.takeIf {
+                    "isVideoSaturationFilterEnabled" in root
+                } ?: (upgradedPreferences.videoSaturation != PlayerPreferences.DEFAULT_VIDEO_SATURATION),
+                isVideoHueFilterEnabled = upgradedPreferences.isVideoHueFilterEnabled.takeIf {
+                    "isVideoHueFilterEnabled" in root
+                } ?: (upgradedPreferences.videoHue != PlayerPreferences.DEFAULT_VIDEO_HUE),
+                isVideoGammaFilterEnabled = upgradedPreferences.isVideoGammaFilterEnabled.takeIf {
+                    "isVideoGammaFilterEnabled" in root
+                } ?: (upgradedPreferences.videoGamma != PlayerPreferences.DEFAULT_VIDEO_GAMMA),
+                isVideoSharpeningFilterEnabled = upgradedPreferences.isVideoSharpeningFilterEnabled.takeIf {
+                    "isVideoSharpeningFilterEnabled" in root
+                } ?: (upgradedPreferences.videoSharpening != PlayerPreferences.DEFAULT_VIDEO_SHARPENING),
+            )
         }
 
         return upgradedPreferences

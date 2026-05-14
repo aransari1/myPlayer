@@ -13,11 +13,17 @@ data class PlayerPreferences(
     val playerVideoZoom: VideoContentScale = VideoContentScale.BEST_FIT,
     val defaultPlaybackSpeed: Float = 1.0f,
     val shouldApplyVideoFilters: Boolean = false,
+    val isVideoBrightnessFilterEnabled: Boolean = false,
     val videoBrightness: Float = DEFAULT_VIDEO_BRIGHTNESS,
+    val isVideoContrastFilterEnabled: Boolean = false,
     val videoContrast: Float = DEFAULT_VIDEO_CONTRAST,
+    val isVideoSaturationFilterEnabled: Boolean = false,
     val videoSaturation: Float = DEFAULT_VIDEO_SATURATION,
+    val isVideoHueFilterEnabled: Boolean = false,
     val videoHue: Float = DEFAULT_VIDEO_HUE,
+    val isVideoGammaFilterEnabled: Boolean = false,
     val videoGamma: Float = DEFAULT_VIDEO_GAMMA,
+    val isVideoSharpeningFilterEnabled: Boolean = false,
     val videoSharpening: Float = DEFAULT_VIDEO_SHARPENING,
     val shouldAutoPlay: Boolean = true,
     val shouldAutoEnterPip: Boolean = true,
@@ -125,6 +131,22 @@ fun PlayerPreferences.withSubtitleStyleFrom(preferences: PlayerPreferences): Pla
     subtitleColor = preferences.subtitleColor,
     subtitleEdgeStyle = preferences.subtitleEdgeStyle,
     subtitleBottomPaddingFraction = preferences.subtitleBottomPaddingFraction,
+)
+
+fun PlayerPreferences.withVideoFiltersFrom(preferences: PlayerPreferences): PlayerPreferences = copy(
+    shouldApplyVideoFilters = preferences.shouldApplyVideoFilters,
+    isVideoBrightnessFilterEnabled = preferences.isVideoBrightnessFilterEnabled,
+    videoBrightness = preferences.videoBrightness,
+    isVideoContrastFilterEnabled = preferences.isVideoContrastFilterEnabled,
+    videoContrast = preferences.videoContrast,
+    isVideoSaturationFilterEnabled = preferences.isVideoSaturationFilterEnabled,
+    videoSaturation = preferences.videoSaturation,
+    isVideoHueFilterEnabled = preferences.isVideoHueFilterEnabled,
+    videoHue = preferences.videoHue,
+    isVideoGammaFilterEnabled = preferences.isVideoGammaFilterEnabled,
+    videoGamma = preferences.videoGamma,
+    isVideoSharpeningFilterEnabled = preferences.isVideoSharpeningFilterEnabled,
+    videoSharpening = preferences.videoSharpening,
 )
 
 @Serializable

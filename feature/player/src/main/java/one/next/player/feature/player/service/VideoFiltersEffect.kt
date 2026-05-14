@@ -72,7 +72,7 @@ internal class VideoFiltersEffect(
         ) {
             try {
                 glProgram.use()
-                setFilterUniforms(transitionProgress())
+                setFilterUniforms()
                 glProgram.setSamplerTexIdUniform("uTexSampler", inputTexId, 0)
                 glProgram.bindAttributesAndUniforms()
                 GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, VERTEX_COUNT)
@@ -91,20 +91,17 @@ internal class VideoFiltersEffect(
             }
         }
 
-        private fun transitionProgress(): Float = transition.progress(
-            currentMs = SystemClock.elapsedRealtime(),
-            durationMs = transitionDurationMs,
-        )
-
-        private fun setFilterUniforms(progress: Float) {
-            val startFilters = transition.startFilters
-            val targetFilters = transition.targetFilters
-            glProgram.setFloatUniform("uBrightness", startFilters.brightness.interpolate(targetFilters.brightness, progress))
-            glProgram.setFloatUniform("uContrast", startFilters.contrast.interpolate(targetFilters.contrast, progress))
-            glProgram.setFloatUniform("uSaturation", startFilters.saturation.interpolate(targetFilters.saturation, progress))
-            glProgram.setFloatUniform("uHue", startFilters.hue.interpolate(targetFilters.hue, progress))
-            glProgram.setFloatUniform("uGamma", startFilters.gamma.interpolate(targetFilters.gamma, progress))
-            glProgram.setFloatUniform("uSharpness", startFilters.sharpening.interpolate(targetFilters.sharpening, progress) * SHARPNESS_SCALE)
+        private fun setFilterUniforms() {
+            val filters = transition.currentFilters(
+                currentMs = SystemClock.elapsedRealtime(),
+                durationMs = transitionDurationMs,
+            )
+            glProgram.setFloatUniform("uBrightness", filters.brightness)
+            glProgram.setFloatUniform("uContrast", filters.contrast)
+            glProgram.setFloatUniform("uSaturation", filters.saturation)
+            glProgram.setFloatUniform("uHue", filters.hue)
+            glProgram.setFloatUniform("uGamma", filters.gamma)
+            glProgram.setFloatUniform("uSharpness", filters.sharpening * SHARPNESS_SCALE)
         }
 
         private fun createGlProgram(): GlProgram = try {
@@ -169,35 +166,40 @@ internal class VideoFiltersEffect(
             }
 
             vec3 applyColorFilters(vec3 color) {
-              float brightness = uBrightness;
-              float contrast = 1.0 + uContrast;
-              float saturation = 1.0 + uSaturation / 100.0;
-              float hue = uHue;
-              float gamma = max(uGamma, 0.1);
               float luma;
 
-              color = clamp(color + vec3(brightness), 0.0, 1.0);
-              color = clamp((color - vec3(0.5)) * contrast + vec3(0.5), 0.0, 1.0);
-              color = clamp(rotateHue(color, hue), 0.0, 1.0);
-              luma = dot(color, vec3(0.299, 0.587, 0.114));
-              color = clamp(mix(vec3(luma), color, saturation), 0.0, 1.0);
-              return clamp(pow(color, vec3(1.0 / gamma)), 0.0, 1.0);
+              if (uBrightness != 0.0) {
+                color = clamp(color + vec3(uBrightness), 0.0, 1.0);
+              }
+              if (uContrast != 0.0) {
+                color = clamp((color - vec3(0.5)) * (1.0 + uContrast) + vec3(0.5), 0.0, 1.0);
+              }
+              if (uHue != 0.0) {
+                color = clamp(rotateHue(color, uHue), 0.0, 1.0);
+              }
+              if (uSaturation != 0.0) {
+                luma = dot(color, vec3(0.299, 0.587, 0.114));
+                color = clamp(mix(vec3(luma), color, 1.0 + uSaturation / 100.0), 0.0, 1.0);
+              }
+              if (uGamma != 1.0) {
+                color = clamp(pow(color, vec3(1.0 / max(uGamma, 0.1))), 0.0, 1.0);
+              }
+              return color;
             }
 
             void main() {
               vec4 center = texture2D(uTexSampler, vTexSamplingCoord);
-              vec3 centerColor = applyColorFilters(center.rgb);
+              vec3 sourceColor = center.rgb;
 
               if (uSharpness > 0.0) {
                 vec3 north = texture2D(uTexSampler, vTexSamplingCoord + vec2(0.0, -uTexelSize.y)).rgb;
                 vec3 south = texture2D(uTexSampler, vTexSamplingCoord + vec2(0.0, uTexelSize.y)).rgb;
                 vec3 west = texture2D(uTexSampler, vTexSamplingCoord + vec2(-uTexelSize.x, 0.0)).rgb;
                 vec3 east = texture2D(uTexSampler, vTexSamplingCoord + vec2(uTexelSize.x, 0.0)).rgb;
-                vec3 sharpened = center.rgb * (1.0 + 4.0 * uSharpness) - (north + south + west + east) * uSharpness;
-                centerColor = applyColorFilters(clamp(sharpened, 0.0, 1.0));
+                sourceColor = clamp(center.rgb * (1.0 + 4.0 * uSharpness) - (north + south + west + east) * uSharpness, 0.0, 1.0);
               }
 
-              gl_FragColor = vec4(centerColor, center.a);
+              gl_FragColor = vec4(applyColorFilters(sourceColor), center.a);
             }
         """
     }

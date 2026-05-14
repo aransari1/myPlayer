@@ -31,6 +31,70 @@ class PlayerPreferencesSerializerTest {
     }
 
     @Test
+    fun readFrom_enablesAdjustedLegacyVideoFilters() = runBlocking {
+        val currentJson = """
+            {
+                "shouldApplyVideoFilters": true,
+                "videoBrightness": 0.25,
+                "videoSharpening": 0.5
+            }
+        """.trimIndent()
+
+        val result = PlayerPreferencesSerializer.readFrom(
+            ByteArrayInputStream(currentJson.encodeToByteArray()),
+        )
+
+        assertEquals(true, result.isVideoBrightnessFilterEnabled)
+        assertEquals(false, result.isVideoContrastFilterEnabled)
+        assertEquals(true, result.isVideoSharpeningFilterEnabled)
+        assertEquals(0.25f, result.videoBrightness)
+        assertEquals(0.5f, result.videoSharpening)
+    }
+
+    @Test
+    fun readFrom_migratesMissingVideoFilterEnabledKeysIndividually() = runBlocking {
+        val currentJson = """
+            {
+                "shouldApplyVideoFilters": true,
+                "isVideoBrightnessFilterEnabled": false,
+                "videoBrightness": 0.25,
+                "videoContrast": 0.5
+            }
+        """.trimIndent()
+
+        val result = PlayerPreferencesSerializer.readFrom(
+            ByteArrayInputStream(currentJson.encodeToByteArray()),
+        )
+
+        assertEquals(false, result.isVideoBrightnessFilterEnabled)
+        assertEquals(true, result.isVideoContrastFilterEnabled)
+        assertEquals(0.25f, result.videoBrightness)
+        assertEquals(0.5f, result.videoContrast)
+    }
+
+    @Test
+    fun readFrom_keepsExplicitDisabledVideoFilters() = runBlocking {
+        val currentJson = """
+            {
+                "shouldApplyVideoFilters": true,
+                "isVideoBrightnessFilterEnabled": false,
+                "videoBrightness": 0.25,
+                "isVideoSharpeningFilterEnabled": true,
+                "videoSharpening": 0.5
+            }
+        """.trimIndent()
+
+        val result = PlayerPreferencesSerializer.readFrom(
+            ByteArrayInputStream(currentJson.encodeToByteArray()),
+        )
+
+        assertEquals(false, result.isVideoBrightnessFilterEnabled)
+        assertEquals(true, result.isVideoSharpeningFilterEnabled)
+        assertEquals(0.25f, result.videoBrightness)
+        assertEquals(0.5f, result.videoSharpening)
+    }
+
+    @Test
     fun readFrom_readsCurrentPlayerPreferencesJson() = runBlocking {
         val currentJson = """
             {

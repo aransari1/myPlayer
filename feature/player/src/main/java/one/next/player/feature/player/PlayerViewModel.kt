@@ -27,6 +27,7 @@ import one.next.player.core.model.PlayerPreferences
 import one.next.player.core.model.Video
 import one.next.player.core.model.VideoContentScale
 import one.next.player.core.model.withSubtitleStyleFrom
+import one.next.player.core.model.withVideoFiltersFrom
 import one.next.player.feature.player.extensions.remoteFilePath
 import one.next.player.feature.player.extensions.remoteProtocol
 import one.next.player.feature.player.extensions.remoteServerId
@@ -133,15 +134,7 @@ class PlayerViewModel @Inject constructor(
     fun updateVideoFilters(preferences: PlayerPreferences) {
         val normalizedPreferences = preferences.normalizedVideoFilters()
         updateVideoFilter("confirmed=$normalizedPreferences") {
-            it.copy(
-                shouldApplyVideoFilters = normalizedPreferences.shouldApplyVideoFilters,
-                videoBrightness = normalizedPreferences.videoBrightness,
-                videoContrast = normalizedPreferences.videoContrast,
-                videoSaturation = normalizedPreferences.videoSaturation,
-                videoHue = normalizedPreferences.videoHue,
-                videoGamma = normalizedPreferences.videoGamma,
-                videoSharpening = normalizedPreferences.videoSharpening,
-            )
+            it.withVideoFiltersFrom(normalizedPreferences)
         }
     }
 

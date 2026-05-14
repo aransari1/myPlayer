@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import one.next.player.core.model.PlayerPreferences
 import one.next.player.core.ui.R
@@ -58,7 +59,12 @@ fun VideoFiltersDialog(
             modifier = dialogModifier.testTag("dialog_video_filters"),
             onDismissRequest = restoreAndDismiss,
             title = { Text(text = stringResource(R.string.video_filters)) },
-            confirmButton = { DoneButton(onClick = confirmAndDismiss) },
+            confirmButton = {
+                DoneButton(
+                    modifier = Modifier.testTag("btn_done_video_filters"),
+                    onClick = confirmAndDismiss,
+                )
+            },
             dismissButton = {
                 TextButton(
                     modifier = Modifier.testTag("btn_reset_video_filters"),
@@ -66,7 +72,10 @@ fun VideoFiltersDialog(
                 ) {
                     Text(text = stringResource(R.string.reset))
                 }
-                CancelButton(onClick = restoreAndDismiss)
+                CancelButton(
+                    modifier = Modifier.testTag("btn_cancel_video_filters"),
+                    onClick = restoreAndDismiss,
+                )
             },
             content = {
                 if (isLandscape) {
@@ -111,6 +120,7 @@ fun VideoFiltersPanel(
         ) {
             if (isLandscape) {
                 LandscapeVideoFiltersContent(
+                    modifier = Modifier.weight(1f),
                     preferences = draftPreferences,
                     onUpdatePreferences = updateDraft,
                 )
@@ -134,8 +144,14 @@ fun VideoFiltersPanel(
                     Text(text = stringResource(R.string.reset))
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                CancelButton(onClick = restoreAndDismiss)
-                DoneButton(onClick = confirmAndDismiss)
+                CancelButton(
+                    modifier = Modifier.testTag("btn_cancel_video_filters"),
+                    onClick = restoreAndDismiss,
+                )
+                DoneButton(
+                    modifier = Modifier.testTag("btn_done_video_filters"),
+                    onClick = confirmAndDismiss,
+                )
             }
         }
     }
@@ -174,11 +190,17 @@ private fun VideoFiltersEditor(
         updateDraft {
             it.copy(
                 shouldApplyVideoFilters = false,
+                isVideoBrightnessFilterEnabled = false,
                 videoBrightness = PlayerPreferences.DEFAULT_VIDEO_BRIGHTNESS,
+                isVideoContrastFilterEnabled = false,
                 videoContrast = PlayerPreferences.DEFAULT_VIDEO_CONTRAST,
+                isVideoSaturationFilterEnabled = false,
                 videoSaturation = PlayerPreferences.DEFAULT_VIDEO_SATURATION,
+                isVideoHueFilterEnabled = false,
                 videoHue = PlayerPreferences.DEFAULT_VIDEO_HUE,
+                isVideoGammaFilterEnabled = false,
                 videoGamma = PlayerPreferences.DEFAULT_VIDEO_GAMMA,
+                isVideoSharpeningFilterEnabled = false,
                 videoSharpening = PlayerPreferences.DEFAULT_VIDEO_SHARPENING,
             )
         }
@@ -221,11 +243,14 @@ private fun PortraitVideoFiltersContent(
 private fun LandscapeVideoFiltersContent(
     preferences: PlayerPreferences,
     onUpdatePreferences: ((PlayerPreferences) -> PlayerPreferences) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val sliderSpecs = videoFilterSliderSpecs(preferences, onUpdatePreferences)
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         VideoFiltersSwitch(
@@ -271,7 +296,10 @@ private data class VideoFilterSliderSpec(
     val valueRange: ClosedFloatingPointRange<Float>,
     val valueText: String,
     val testTag: String,
+    val switchTestTag: String,
     val isEnabled: Boolean,
+    val isChecked: Boolean,
+    val onCheckedChange: () -> Unit,
     val onValueChange: (Float) -> Unit,
 )
 
@@ -286,7 +314,14 @@ private fun videoFilterSliderSpecs(
         valueRange = PlayerPreferences.MIN_VIDEO_BRIGHTNESS..PlayerPreferences.MAX_VIDEO_BRIGHTNESS,
         valueText = signedPercent(preferences.videoBrightness),
         testTag = "slider_video_brightness",
+        switchTestTag = "switch_video_brightness",
         isEnabled = preferences.shouldApplyVideoFilters,
+        isChecked = preferences.isVideoBrightnessFilterEnabled,
+        onCheckedChange = {
+            onUpdatePreferences { preferences ->
+                preferences.copy(isVideoBrightnessFilterEnabled = !preferences.isVideoBrightnessFilterEnabled)
+            }
+        },
         onValueChange = { onUpdatePreferences { preferences -> preferences.copy(videoBrightness = it) } },
     ),
     VideoFilterSliderSpec(
@@ -295,7 +330,14 @@ private fun videoFilterSliderSpecs(
         valueRange = PlayerPreferences.MIN_VIDEO_CONTRAST..PlayerPreferences.MAX_VIDEO_CONTRAST,
         valueText = signedPercent(preferences.videoContrast),
         testTag = "slider_video_contrast",
+        switchTestTag = "switch_video_contrast",
         isEnabled = preferences.shouldApplyVideoFilters,
+        isChecked = preferences.isVideoContrastFilterEnabled,
+        onCheckedChange = {
+            onUpdatePreferences { preferences ->
+                preferences.copy(isVideoContrastFilterEnabled = !preferences.isVideoContrastFilterEnabled)
+            }
+        },
         onValueChange = { onUpdatePreferences { preferences -> preferences.copy(videoContrast = it) } },
     ),
     VideoFilterSliderSpec(
@@ -304,7 +346,14 @@ private fun videoFilterSliderSpecs(
         valueRange = PlayerPreferences.MIN_VIDEO_SATURATION..PlayerPreferences.MAX_VIDEO_SATURATION,
         valueText = signedInteger(preferences.videoSaturation),
         testTag = "slider_video_saturation",
+        switchTestTag = "switch_video_saturation",
         isEnabled = preferences.shouldApplyVideoFilters,
+        isChecked = preferences.isVideoSaturationFilterEnabled,
+        onCheckedChange = {
+            onUpdatePreferences { preferences ->
+                preferences.copy(isVideoSaturationFilterEnabled = !preferences.isVideoSaturationFilterEnabled)
+            }
+        },
         onValueChange = { onUpdatePreferences { preferences -> preferences.copy(videoSaturation = it) } },
     ),
     VideoFilterSliderSpec(
@@ -313,7 +362,14 @@ private fun videoFilterSliderSpecs(
         valueRange = PlayerPreferences.MIN_VIDEO_HUE..PlayerPreferences.MAX_VIDEO_HUE,
         valueText = stringResource(R.string.degrees, preferences.videoHue.toInt()),
         testTag = "slider_video_hue",
+        switchTestTag = "switch_video_hue",
         isEnabled = preferences.shouldApplyVideoFilters,
+        isChecked = preferences.isVideoHueFilterEnabled,
+        onCheckedChange = {
+            onUpdatePreferences { preferences ->
+                preferences.copy(isVideoHueFilterEnabled = !preferences.isVideoHueFilterEnabled)
+            }
+        },
         onValueChange = { onUpdatePreferences { preferences -> preferences.copy(videoHue = it) } },
     ),
     VideoFilterSliderSpec(
@@ -322,7 +378,14 @@ private fun videoFilterSliderSpecs(
         valueRange = PlayerPreferences.MIN_VIDEO_GAMMA..PlayerPreferences.MAX_VIDEO_GAMMA,
         valueText = String.format("%.2f", preferences.videoGamma),
         testTag = "slider_video_gamma",
+        switchTestTag = "switch_video_gamma",
         isEnabled = preferences.shouldApplyVideoFilters,
+        isChecked = preferences.isVideoGammaFilterEnabled,
+        onCheckedChange = {
+            onUpdatePreferences { preferences ->
+                preferences.copy(isVideoGammaFilterEnabled = !preferences.isVideoGammaFilterEnabled)
+            }
+        },
         onValueChange = { onUpdatePreferences { preferences -> preferences.copy(videoGamma = it) } },
     ),
     VideoFilterSliderSpec(
@@ -331,7 +394,14 @@ private fun videoFilterSliderSpecs(
         valueRange = PlayerPreferences.DEFAULT_VIDEO_SHARPENING..PlayerPreferences.MAX_VIDEO_SHARPENING,
         valueText = stringResource(R.string.percent, (preferences.videoSharpening * 100).toInt()),
         testTag = "slider_video_sharpening",
+        switchTestTag = "switch_video_sharpening",
         isEnabled = preferences.shouldApplyVideoFilters,
+        isChecked = preferences.isVideoSharpeningFilterEnabled,
+        onCheckedChange = {
+            onUpdatePreferences { preferences ->
+                preferences.copy(isVideoSharpeningFilterEnabled = !preferences.isVideoSharpeningFilterEnabled)
+            }
+        },
         onValueChange = { onUpdatePreferences { preferences -> preferences.copy(videoSharpening = it) } },
     ),
 )
@@ -343,9 +413,18 @@ private fun VideoFilterSlider(spec: VideoFilterSliderSpec) {
         title = spec.title,
         description = spec.valueText,
         isEnabled = spec.isEnabled,
+        isSliderEnabled = spec.isEnabled && spec.isChecked,
         value = spec.value,
         valueRange = spec.valueRange,
         onValueChange = spec.onValueChange,
+        trailingContent = {
+            NextSwitch(
+                modifier = Modifier.testTag(spec.switchTestTag),
+                isChecked = spec.isChecked,
+                onCheckedChange = { spec.onCheckedChange() },
+                isEnabled = spec.isEnabled,
+            )
+        },
     )
 }
 
@@ -369,16 +448,24 @@ private fun CompactVideoFilterSlider(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
+                modifier = Modifier.widthIn(min = 40.dp).padding(end = 8.dp),
                 text = spec.valueText,
+                textAlign = TextAlign.End,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            NextSwitch(
+                modifier = Modifier.testTag(spec.switchTestTag),
+                isChecked = spec.isChecked,
+                onCheckedChange = { spec.onCheckedChange() },
+                isEnabled = spec.isEnabled,
             )
         }
         Slider(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 28.dp),
-            enabled = spec.isEnabled,
+            enabled = spec.isEnabled && spec.isChecked,
             value = spec.value,
             valueRange = spec.valueRange,
             onValueChange = spec.onValueChange,
