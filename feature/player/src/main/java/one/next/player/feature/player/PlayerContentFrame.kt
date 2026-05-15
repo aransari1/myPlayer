@@ -3,6 +3,10 @@ package one.next.player.feature.player
 import android.graphics.Rect
 import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
@@ -15,6 +19,7 @@ import androidx.media3.ui.compose.PlayerSurface
 import androidx.media3.ui.compose.SURFACE_TYPE_SURFACE_VIEW
 import androidx.media3.ui.compose.modifiers.resizeWithContentScale
 import androidx.media3.ui.compose.state.rememberPresentationState
+import one.next.player.core.common.Logger
 import one.next.player.feature.player.extensions.toContentScale
 import one.next.player.feature.player.state.ControlsVisibilityState
 import one.next.player.feature.player.state.PictureInPictureState
@@ -43,6 +48,7 @@ fun PlayerContentFrame(
 ) {
     val presentationState = rememberPresentationState(player)
     val density = LocalDensity.current
+    var lastLoggedSurfaceLayout by remember { mutableStateOf("") }
 
     // presentationState.videoSizeDp 依赖 onVideoSizeChanged，ASS wrapper 不触发该回调
     // 从 metadata extras 中的视频尺寸作为后备
@@ -79,6 +85,14 @@ fun PlayerContentFrame(
                     bounds.right.toInt(),
                     bounds.bottom.toInt(),
                 )
+                val surfaceLayoutKey = "${rect.width()}x${rect.height()}@${rect.left},${rect.top}:${videoZoomAndContentScaleState.videoContentScale}:${sourceSizeDp?.width}x${sourceSizeDp?.height}"
+                if (surfaceLayoutKey != lastLoggedSurfaceLayout) {
+                    lastLoggedSurfaceLayout = surfaceLayoutKey
+                    Logger.info(
+                        TAG,
+                        "Player surface layout size=${rect.width()}x${rect.height()} left=${rect.left} top=${rect.top} contentScale=${videoZoomAndContentScaleState.videoContentScale} sourceDp=${sourceSizeDp?.width}x${sourceSizeDp?.height} coverSurface=${presentationState.coverSurface}",
+                    )
+                }
                 pictureInPictureState.updateVideoViewRect(rect)
             }
             .graphicsLayer {
@@ -115,3 +129,5 @@ fun PlayerContentFrame(
         ShutterView()
     }
 }
+
+private const val TAG = "PlayerContentFrame"

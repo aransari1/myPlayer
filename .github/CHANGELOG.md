@@ -1,10 +1,10 @@
-- 支持单独启用每个视频滤镜，未启用的滤镜会保持关闭以节省电量
-- 修复播放器滤镜面板横屏确认按钮被滑杆遮挡的问题
+- 改进日志脱敏，导出的日志会隐藏路径、链接、邮箱和 IP 地址
+- 增加播放器暂停黑屏和视频缩放问题的诊断信息，便于定位无法复现的问题
 
 <details>
 <summary>English Version</summary>
 
-- Allow each video filter to be enabled independently while keeping unused filters disabled to save battery
-- Fix the landscape player filter panel confirm button being blocked by sliders
+- Improve log sanitization so exported logs hide paths, links, emails, and IP addresses
+- Add diagnostics for paused-video black screens and video scaling issues to help investigate problems that cannot be reproduced
 
 </details>

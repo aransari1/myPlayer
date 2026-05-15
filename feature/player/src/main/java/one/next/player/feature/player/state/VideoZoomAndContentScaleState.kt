@@ -22,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import one.next.player.core.common.Logger
 import one.next.player.core.model.VideoContentScale
 import one.next.player.feature.player.extensions.copy
 import one.next.player.feature.player.extensions.next
@@ -64,6 +65,7 @@ class VideoZoomAndContentScaleState(
     private val coroutineScope: CoroutineScope,
 ) {
     companion object Companion {
+        private const val TAG = "VideoZoomAndContentScaleState"
         private const val MIN_ZOOM = 0.25f
         private const val MAX_ZOOM = 4f
         private const val CONTENT_SCALE_INDICATOR_DURATION_MS = 1000L
@@ -95,9 +97,14 @@ class VideoZoomAndContentScaleState(
     private var showContentScaleJob: Job? = null
 
     fun onVideoContentScaleChanged(newContentScale: VideoContentScale) {
+        val previousContentScale = videoContentScale
         videoContentScale = newContentScale
         zoom = 1f
         offset = Offset.Zero
+        Logger.info(
+            TAG,
+            "Video content scale changed from=$previousContentScale to=$newContentScale metadataVideo=${metadataVideoWidth}x$metadataVideoHeight rotation=$metadataVideoRotation",
+        )
         onEvent(VideoZoomEvent.ContentScaleChanged(videoContentScale))
         updateVideoScaleMetadataAndSendEvent()
         shouldShowContentScaleIndicator()
@@ -156,9 +163,15 @@ class VideoZoomAndContentScaleState(
 
     private fun updateFromMetadata() {
         val metadata = player.currentMediaItem?.mediaMetadata ?: return
+        val previousVideoWidth = metadataVideoWidth
+        val previousVideoHeight = metadataVideoHeight
+        val previousVideoRotation = metadataVideoRotation
         metadataVideoWidth = metadata.videoWidth ?: 0
         metadataVideoHeight = metadata.videoHeight ?: 0
         metadataVideoRotation = metadata.videoRotation ?: 0
+        if (previousVideoWidth == metadataVideoWidth && previousVideoHeight == metadataVideoHeight && previousVideoRotation == metadataVideoRotation) return
+
+        Logger.info(TAG, "Video metadata size=${metadataVideoWidth}x$metadataVideoHeight rotation=$metadataVideoRotation scale=$videoContentScale zoom=$zoom")
     }
 
     private fun updateVideoScaleMetadataAndSendEvent(zoom: Float = this.zoom) {

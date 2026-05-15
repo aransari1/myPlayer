@@ -12,6 +12,7 @@ class FileLogStore(
     private val maxSizeBytes: Long = MAX_LOG_SIZE_BYTES,
 ) {
     private val logFile = File(context.filesDir, LOG_FILE_NAME)
+    private val exportLogFile = File(context.cacheDir, EXPORT_LOG_FILE_NAME)
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
     private val lock = Any()
 
@@ -19,7 +20,7 @@ class FileLogStore(
         level: String,
         tag: String,
         message: String,
-        throwable: Throwable? = null,
+        throwable: String? = null,
     ) = synchronized(lock) {
         val line = buildString {
             append(dateFormat.format(Date()))
@@ -31,7 +32,7 @@ class FileLogStore(
             append(message)
             throwable?.let {
                 appendLine()
-                append(it.stackTraceToString())
+                append(it)
             }
             appendLine()
         }
@@ -50,10 +51,10 @@ class FileLogStore(
         if (logFile.exists()) logFile.writeText("")
     }
 
-    fun exportFile(): File = synchronized(lock) {
-        logFile.parentFile?.mkdirs()
-        if (!logFile.exists()) logFile.createNewFile()
-        logFile
+    fun exportFile(content: String): File = synchronized(lock) {
+        exportLogFile.parentFile?.mkdirs()
+        exportLogFile.writeText(content)
+        exportLogFile
     }
 
     private fun trimToMaxSize() {
@@ -70,6 +71,7 @@ class FileLogStore(
 
     companion object {
         private const val LOG_FILE_NAME = "one_player.log"
+        private const val EXPORT_LOG_FILE_NAME = "one_player_sanitized.log"
         const val MAX_LOG_SIZE_BYTES = 10L * 1024L * 1024L
     }
 }
