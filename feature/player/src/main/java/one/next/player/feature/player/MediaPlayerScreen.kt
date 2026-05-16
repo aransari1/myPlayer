@@ -85,6 +85,8 @@ import one.next.player.core.model.PlayerControlZone
 import one.next.player.core.model.PlayerControlsLayout
 import one.next.player.core.model.PlayerPreferences
 import one.next.player.core.ui.R as coreUiR
+import one.next.player.core.ui.components.OptionsDialog
+import one.next.player.core.ui.components.RadioTextButton
 import one.next.player.core.ui.extensions.copy
 import one.next.player.feature.player.buttons.NextButton
 import one.next.player.feature.player.buttons.PlayPauseButton
@@ -1250,31 +1252,22 @@ private fun DecoderPriorityDialog(
     onDecoderPriorityClick: (DecoderPriority) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    OptionsDialog(
         modifier = Modifier.testTag("dialog_decoder_priority"),
-        onDismissRequest = onDismiss,
-        title = {
-            Text(text = stringResource(coreUiR.string.decoder_priority))
-        },
-        text = {
-            Column {
-                DecoderPriority.entries.forEach { decoderPriority ->
-                    TextButton(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("btn_decoder_${decoderPriority.logSuffix()}"),
-                        onClick = { onDecoderPriorityClick(decoderPriority) },
-                    ) {
-                        Text(
-                            text = decoderPriority.shortName(),
-                            fontWeight = if (decoderPriority == currentDecoderPriority) FontWeight.Bold else FontWeight.Normal,
-                        )
-                    }
-                }
+        title = stringResource(coreUiR.string.decoder_priority),
+        onDismissClick = onDismiss,
+    ) {
+        DecoderPriority.entries.forEach { decoderPriority ->
+            item {
+                RadioTextButton(
+                    modifier = Modifier.testTag("btn_decoder_${decoderPriority.logSuffix()}"),
+                    text = decoderPriority.shortName(),
+                    isSelected = decoderPriority == currentDecoderPriority,
+                    onClick = { onDecoderPriorityClick(decoderPriority) },
+                )
             }
-        },
-        confirmButton = {},
-    )
+        }
+    }
 }
 
 private fun DecoderPriority.logSuffix(): String = when (this) {
