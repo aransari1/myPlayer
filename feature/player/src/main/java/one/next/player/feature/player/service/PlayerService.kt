@@ -7,7 +7,6 @@ import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.media.audiofx.LoudnessEnhancer
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.annotation.OptIn
@@ -2636,18 +2635,7 @@ class PlayerService : MediaSessionService() {
         } ?: lower
     }
 
-    private fun resolveAssRenderType(): AssRenderType = if (isRunningOnEmulator()) {
-        AssRenderType.OVERLAY_CANVAS
-    } else {
-        AssRenderType.OVERLAY_OPEN_GL
-    }
-
-    private fun isRunningOnEmulator(): Boolean {
-        if (Build.FINGERPRINT.startsWith("generic", ignoreCase = true)) return true
-        if (Build.MODEL.contains("Emulator", ignoreCase = true)) return true
-        if (Build.MODEL.contains("sdk_gphone", ignoreCase = true)) return true
-        return Build.HARDWARE.contains("ranchu", ignoreCase = true)
-    }
+    private fun resolveAssRenderType(): AssRenderType = AssRenderType.OVERLAY_CANVAS
 
     private fun String.containsAny(vararg keywords: String): Boolean = keywords.any { contains(it, ignoreCase = true) }
 
