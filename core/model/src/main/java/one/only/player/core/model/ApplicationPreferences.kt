@@ -1,5 +1,6 @@
 package one.only.player.core.model
 
+import kotlin.math.roundToInt
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -21,6 +22,7 @@ data class ApplicationPreferences(
     val remoteFolderLastPlayedMediaPaths: Map<String, String> = emptyMap(),
     val mediaViewMode: MediaViewMode = MediaViewMode.FOLDERS,
     val mediaLayoutMode: MediaLayoutMode = MediaLayoutMode.LIST,
+    val mediaLayoutScale: Float = DEFAULT_MEDIA_LAYOUT_SCALE,
 
     // 字段显示
     val shouldShowDurationField: Boolean = true,
@@ -47,7 +49,23 @@ data class ApplicationPreferences(
         }
     }
 
+    fun normalizedMediaLayoutScale(): Float = mediaLayoutScale
+        .coerceIn(MIN_MEDIA_LAYOUT_SCALE, MAX_MEDIA_LAYOUT_SCALE)
+        .roundToStep(MEDIA_LAYOUT_SCALE_STEP)
+
+    fun withMediaLayoutScale(scale: Float): ApplicationPreferences = copy(
+        mediaLayoutScale = scale
+            .coerceIn(MIN_MEDIA_LAYOUT_SCALE, MAX_MEDIA_LAYOUT_SCALE)
+            .roundToStep(MEDIA_LAYOUT_SCALE_STEP),
+    )
+
     companion object {
         const val DEFAULT_THUMBNAIL_FRAME_POSITION = 0.5f
+        const val DEFAULT_MEDIA_LAYOUT_SCALE = 1f
+        const val MIN_MEDIA_LAYOUT_SCALE = 0.75f
+        const val MAX_MEDIA_LAYOUT_SCALE = 1.5f
+        const val MEDIA_LAYOUT_SCALE_STEP = 0.05f
     }
 }
+
+private fun Float.roundToStep(step: Float): Float = (this / step).roundToInt() * step

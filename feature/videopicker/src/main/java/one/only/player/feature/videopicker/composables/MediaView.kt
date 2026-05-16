@@ -51,9 +51,10 @@ fun MediaView(
     onVideoLoaded: (Uri) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
+    val layoutScale = preferences.normalizedMediaLayoutScale()
 
-    val folderMinWidth = 90.dp
-    val videoMinWidth = 160.dp
+    val folderMinWidth = 90.dp * layoutScale
+    val videoMinWidth = 160.dp * layoutScale
     BoxWithConstraints {
         val contentHorizontalPadding = when (preferences.mediaLayoutMode) {
             MediaLayoutMode.LIST -> 8.dp
@@ -68,16 +69,16 @@ fun MediaView(
         val maxVideos = (maxWidth / videoMinWidth).toInt()
         val spans = when (preferences.mediaLayoutMode) {
             MediaLayoutMode.LIST -> 1
-            MediaLayoutMode.GRID -> lcm(maxFolders, maxVideos)
+            MediaLayoutMode.GRID -> lcm(maxFolders.coerceAtLeast(1), maxVideos.coerceAtLeast(1))
         }
 
         val singleFolderSpan = when (preferences.mediaLayoutMode) {
             MediaLayoutMode.LIST -> 1
-            MediaLayoutMode.GRID -> spans / maxFolders
+            MediaLayoutMode.GRID -> spans / maxFolders.coerceAtLeast(1)
         }
         val singleVideoSpan = when (preferences.mediaLayoutMode) {
             MediaLayoutMode.LIST -> 1
-            MediaLayoutMode.GRID -> spans / maxVideos
+            MediaLayoutMode.GRID -> spans / maxVideos.coerceAtLeast(1)
         }
 
         LazyVerticalGrid(

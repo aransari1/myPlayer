@@ -34,9 +34,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import one.only.player.core.model.ApplicationPreferences
 import one.only.player.core.model.MediaLayoutMode
 import one.only.player.core.model.MediaViewMode
@@ -105,6 +107,20 @@ fun QuickSettingsDialog(
                         }
                     }
                 }
+                MediaLayoutScaleControls(
+                    scale = preferences.normalizedMediaLayoutScale(),
+                    onResetClick = { preferences = preferences.withMediaLayoutScale(ApplicationPreferences.DEFAULT_MEDIA_LAYOUT_SCALE) },
+                    onDecreaseClick = {
+                        preferences = preferences.withMediaLayoutScale(
+                            preferences.mediaLayoutScale - ApplicationPreferences.MEDIA_LAYOUT_SCALE_STEP,
+                        )
+                    },
+                    onIncreaseClick = {
+                        preferences = preferences.withMediaLayoutScale(
+                            preferences.mediaLayoutScale + ApplicationPreferences.MEDIA_LAYOUT_SCALE_STEP,
+                        )
+                    },
+                )
                 HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
                 DialogSectionTitle(text = stringResource(R.string.sort))
                 SortOptions(
@@ -194,6 +210,47 @@ fun QuickSettingsDialog(
             CancelButton(onClick = onDismiss)
         },
     )
+}
+
+@Composable
+private fun MediaLayoutScaleControls(
+    scale: Float,
+    onResetClick: () -> Unit,
+    onDecreaseClick: () -> Unit,
+    onIncreaseClick: () -> Unit,
+) {
+    DialogSectionTitle(text = stringResource(R.string.media_layout_scale))
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = "${(scale * 100).roundToInt()}%",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
+                .padding(horizontal = 10.dp)
+                .testTag("text_media_layout_scale"),
+        )
+        TextIconToggleButton(
+            text = stringResource(R.string.media_layout_scale_reset),
+            icon = NextIcons.Replay,
+            modifier = Modifier.testTag("btn_media_layout_scale_reset"),
+            onClick = { onResetClick() },
+        )
+        TextIconToggleButton(
+            text = stringResource(R.string.media_layout_scale_decrease),
+            icon = NextIcons.Remove,
+            modifier = Modifier.testTag("btn_media_layout_scale_decrease"),
+            onClick = { onDecreaseClick() },
+        )
+        TextIconToggleButton(
+            text = stringResource(R.string.media_layout_scale_increase),
+            icon = NextIcons.Add,
+            modifier = Modifier.testTag("btn_media_layout_scale_increase"),
+            onClick = { onIncreaseClick() },
+        )
+    }
 }
 
 @Composable

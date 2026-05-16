@@ -321,6 +321,10 @@
     <string name="go_to_settings">Go to settings</string>
     <string name="not_now">Not now</string>
     <string name="media_layout">Media Layout</string>
+    <string name="media_layout_scale">Layout scale</string>
+    <string name="media_layout_scale_decrease">Decrease</string>
+    <string name="media_layout_scale_increase">Increase</string>
+    <string name="media_layout_scale_reset">Reset scale</string>
     <string name="list">List</string>
     <string name="grid">Grid</string>
     <string name="info">Info</string>

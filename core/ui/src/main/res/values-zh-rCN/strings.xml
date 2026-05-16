@@ -315,6 +315,10 @@
     <string name="not_now">暂不</string>
     <string name="list">列表</string>
     <string name="media_layout">媒体布局</string>
+    <string name="media_layout_scale">布局缩放</string>
+    <string name="media_layout_scale_decrease">减小</string>
+    <string name="media_layout_scale_increase">增大</string>
+    <string name="media_layout_scale_reset">重置缩放</string>
     <string name="grid">网格</string>
     <string name="info">信息</string>
     <string name="play">播放</string>

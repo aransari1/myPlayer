@@ -325,6 +325,9 @@ class DebugCommandProvider : ContentProvider() {
             "media.recycle_bin" -> updateApplicationBoolean(value) { preferences, isEnabled ->
                 preferences.copy(isRecycleBinEnabled = isEnabled)
             }
+            "media.layout_scale" -> updateApplicationFloat(value) { preferences, floatValue ->
+                preferences.withMediaLayoutScale(floatValue)
+            }
             "media.exclude_folder" -> {
                 val path = value.requiredString(EXTRA_VALUE)
                 val isEnabled = value.getBoolean(EXTRA_ENABLED, true)
@@ -553,6 +556,9 @@ class DebugCommandProvider : ContentProvider() {
                 AppLanguageManager.applyToCurrent("")
             }
             "subtitle.clear_external_font" -> subtitleFontRepository().clearFont()
+            "media.layout_scale_reset" -> preferencesRepository().updateApplicationPreferences {
+                it.withMediaLayoutScale(ApplicationPreferences.DEFAULT_MEDIA_LAYOUT_SCALE)
+            }
             else -> error("Unknown action target: $target")
         }
     }
@@ -563,6 +569,14 @@ class DebugCommandProvider : ContentProvider() {
     ) {
         val isEnabled = extras.requiredBoolean(EXTRA_ENABLED)
         preferencesRepository().updateApplicationPreferences { transform(it, isEnabled) }
+    }
+
+    private suspend fun DebugCommandEntryPoint.updateApplicationFloat(
+        extras: Bundle,
+        transform: (ApplicationPreferences, Float) -> ApplicationPreferences,
+    ) {
+        val value = extras.requiredFloat(EXTRA_VALUE)
+        preferencesRepository().updateApplicationPreferences { transform(it, value) }
     }
 
     private suspend fun DebugCommandEntryPoint.updatePlayerBoolean(
