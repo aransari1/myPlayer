@@ -164,6 +164,7 @@ enum class PlayerControl {
     NEXT,
     LOCK,
     SCALE,
+    DECODER,
     AMBIENCE_MODE,
     VIDEO_FILTERS,
     PIP,

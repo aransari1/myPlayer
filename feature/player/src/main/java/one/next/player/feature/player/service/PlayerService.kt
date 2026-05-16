@@ -772,8 +772,68 @@ class PlayerService : MediaSessionService() {
         seekTo(mediaItemIndex, positionMs)
     }
 
+    private fun switchPlayerDecoderPriority(decoderPriority: DecoderPriority) {
+        if (decoderPriority == activeDecoderPriority) return
+        val session = mediaSession ?: return
+        val currentPlayer = session.player as? ExoPlayer ?: return
+        val mediaItems = (0 until currentPlayer.mediaItemCount).map { currentPlayer.getMediaItemAt(it) }
+        if (mediaItems.isEmpty()) {
+            Logger.info(TAG, "Switch decoder to ${decoderPriority.logName()} without active media items")
+            val nextPlayer = createPlayer(
+                decoderPriority = decoderPriority,
+                assHandler = assHandler ?: return,
+            )
+            releaseLoudnessEnhancer()
+            currentPlayer.removeListener(playbackStateListener)
+            currentPlayer.removeAnalyticsListener(startupAnalyticsListener)
+            session.player = nextPlayer
+            currentPlayer.release()
+            return
+        }
+
+        val currentIndex = currentPlayer.currentMediaItemIndex.coerceIn(0, mediaItems.lastIndex)
+        val playbackPosition = currentPlayer.currentPosition.coerceAtLeast(0L)
+        val shouldPlayWhenReady = currentPlayer.playWhenReady
+        val playbackParameters = currentPlayer.playbackParameters
+        val trackSelectionParameters = currentPlayer.trackSelectionParameters
+        val shuffleModeEnabled = currentPlayer.shuffleModeEnabled
+        val repeatMode = currentPlayer.repeatMode
+        val isSkipSilenceEnabled = currentPlayer.isSkipSilenceEnabledForPlayer
+        val subtitleDelayMilliseconds = currentPlayer.playerSpecificSubtitleDelayMilliseconds
+        val subtitleSpeed = currentPlayer.playerSpecificSubtitleSpeed
+        val nextPlayer = createPlayer(
+            decoderPriority = decoderPriority,
+            assHandler = assHandler ?: return,
+        )
+        Logger.info(TAG, "Switch decoder to ${decoderPriority.logName()} at index=$currentIndex position=$playbackPosition")
+
+        releaseLoudnessEnhancer()
+        currentPlayer.removeListener(playbackStateListener)
+        currentPlayer.removeAnalyticsListener(startupAnalyticsListener)
+        session.player = nextPlayer
+        currentPlayer.clearMediaItems()
+        currentPlayer.stop()
+        currentPlayer.release()
+
+        nextPlayer.setMediaItems(mediaItems, currentIndex, playbackPosition)
+        nextPlayer.prepare()
+        nextPlayer.playWhenReady = shouldPlayWhenReady
+        nextPlayer.restoreRuntimeState(
+            trackSelectionParameters = trackSelectionParameters,
+            shuffleModeEnabled = shuffleModeEnabled,
+            repeatMode = repeatMode,
+            isSkipSilenceEnabled = isSkipSilenceEnabled,
+            subtitleDelayMilliseconds = subtitleDelayMilliseconds,
+            subtitleSpeed = subtitleSpeed,
+            playbackParameters = playbackParameters,
+            mediaItemIndex = currentIndex,
+            positionMs = playbackPosition,
+        )
+        updateCurrentVideoEffectsAvailability(nextPlayer)
+    }
+
     private fun isHardwareVideoDecoderError(error: PlaybackException): Boolean {
-        if (activeDecoderPriority != DecoderPriority.PREFER_DEVICE) return false
+        if (!activeDecoderPriority.shouldRetryWithSoftwareDecoder()) return false
         val exoError = error as? ExoPlaybackException ?: return false
         if (exoError.type != ExoPlaybackException.TYPE_RENDERER) return false
         if (exoError.rendererFormat?.sampleMimeType?.startsWith("video/") != true) return false
@@ -1536,13 +1596,15 @@ class PlayerService : MediaSessionService() {
         assHandler: AssHandler,
     ): ExoPlayer {
         activeDecoderPriority = decoderPriority
+        val extensionRendererMode = decoderPriority.extensionRendererMode()
+        Logger.info(TAG, "Create player decoder=${decoderPriority.logName()} policy=$decoderPriority extensionRendererMode=$extensionRendererMode")
         val renderersFactory = NormalizingRenderersFactory(
             context = applicationContext,
             volumeNormalizationAudioProcessor = volumeNormalizationAudioProcessor,
             shouldUseAudioExtensionFallback = decoderPriority.shouldUseAudioExtensionFallback(),
         )
             .setEnableDecoderFallback(true)
-            .setExtensionRendererMode(decoderPriority.extensionRendererMode())
+            .setExtensionRendererMode(extensionRendererMode)
 
         val preferences = playerPreferences
         val trackSelector = DefaultTrackSelector(applicationContext).apply {
@@ -1589,10 +1651,12 @@ class PlayerService : MediaSessionService() {
         serviceScope.launch(Dispatchers.IO) { warmUpCodecCache() }
         serviceScope.launch {
             preferencesRepository.playerPreferences
-                .distinctUntilChanged { old, new ->
-                    old.toVideoFilterPreferences() == new.toVideoFilterPreferences() &&
-                        old.decoderPriority == new.decoderPriority
-                }
+                .distinctUntilChanged { old, new -> old.decoderPriority == new.decoderPriority }
+                .collect { preferences -> switchPlayerDecoderPriority(preferences.decoderPriority) }
+        }
+        serviceScope.launch {
+            preferencesRepository.playerPreferences
+                .distinctUntilChanged { old, new -> old.toVideoFilterPreferences() == new.toVideoFilterPreferences() }
                 .collect(::applyVideoFilters)
         }
         serviceScope.launch {

@@ -57,6 +57,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import kotlin.time.Duration.Companion.milliseconds
 import one.next.player.core.model.ControlButtonsPosition
+import one.next.player.core.model.DecoderPriority
 import one.next.player.core.model.PlayerControl
 import one.next.player.core.model.PlayerControlZone
 import one.next.player.core.model.VideoContentScale
@@ -83,6 +84,7 @@ fun ControlsBottomView(
     bottomLeftControls: List<PlayerControl>,
     controlButtonsPosition: ControlButtonsPosition,
     videoContentScale: VideoContentScale,
+    decoderPriority: DecoderPriority,
     isPipSupported: Boolean,
     pendingSeekPosition: Long?,
     itemBounds: MutableMap<PlayerControl, Rect>,
@@ -93,6 +95,7 @@ fun ControlsBottomView(
     onSubtitleClick: () -> Unit,
     onVideoContentScaleClick: () -> Unit,
     onVideoContentScaleLongClick: () -> Unit,
+    onDecoderClick: () -> Unit,
     onAmbienceModeClick: () -> Unit,
     isAmbienceModeEnabled: Boolean,
     onVideoFiltersClick: () -> Unit,
@@ -233,6 +236,7 @@ fun ControlsBottomView(
                             isBeingDragged = draggingControl == control,
                             player = player,
                             videoContentScale = videoContentScale,
+                            decoderPriority = decoderPriority,
                             isPipSupported = isPipSupported,
                             isCustomizingControls = isCustomizingControls,
                             visiblePlayerControls = visiblePlayerControls,
@@ -243,6 +247,7 @@ fun ControlsBottomView(
                             onLockControlsClick = onLockControlsClick,
                             onVideoContentScaleClick = onVideoContentScaleClick,
                             onVideoContentScaleLongClick = onVideoContentScaleLongClick,
+                            onDecoderClick = onDecoderClick,
                             onAmbienceModeClick = onAmbienceModeClick,
                             isAmbienceModeEnabled = isAmbienceModeEnabled,
                             onVideoFiltersClick = onVideoFiltersClick,

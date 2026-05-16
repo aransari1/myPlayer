@@ -10,9 +10,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
+import one.next.player.core.model.DecoderPriority
 import one.next.player.core.model.PlayerControl
 import one.next.player.core.model.VideoContentScale
 import one.next.player.core.ui.R
@@ -29,6 +32,7 @@ internal fun PlayerCustomizableControlButton(
     control: PlayerControl,
     player: Player,
     videoContentScale: VideoContentScale,
+    decoderPriority: DecoderPriority,
     isPipSupported: Boolean,
     isCustomizingControls: Boolean,
     visiblePlayerControls: Set<PlayerControl>,
@@ -41,6 +45,7 @@ internal fun PlayerCustomizableControlButton(
     onLockControlsClick: () -> Unit,
     onVideoContentScaleClick: () -> Unit,
     onVideoContentScaleLongClick: () -> Unit,
+    onDecoderClick: () -> Unit,
     onAmbienceModeClick: () -> Unit,
     isAmbienceModeEnabled: Boolean,
     onVideoFiltersClick: () -> Unit,
@@ -150,6 +155,21 @@ internal fun PlayerCustomizableControlButton(
                 Icon(
                     painter = painterResource(videoContentScale.drawableRes()),
                     contentDescription = "btn_scale",
+                )
+            }
+        }
+
+        PlayerControl.DECODER -> {
+            PlayerButton(
+                modifier = buttonModifier.semantics { contentDescription = "btn_decoder_${decoderPriority.logSuffix()}" },
+                onClick = onDecoderClick,
+                isSelected = isSelected,
+                label = label,
+                isOutlineOnly = isPlaceholder,
+            ) {
+                Text(
+                    text = decoderPriority.shortName(),
+                    fontWeight = FontWeight.Bold,
                 )
             }
         }
@@ -271,7 +291,7 @@ internal fun PlayerCustomizableControlButton(
                 },
             ) {
                 if (isSleepTimerActive) {
-                    val remainingMillis = sleepTimerState?.remainingMillis ?: return@PlayerButton
+                    val remainingMillis = sleepTimerState.remainingMillis
                     val remainingMin = ((remainingMillis + 59_999) / 60_000).toInt()
                     Text(
                         text = "$remainingMin",
@@ -311,6 +331,19 @@ internal fun PlayerCustomizableControlButton(
     }
 }
 
+private fun DecoderPriority.logSuffix(): String = when (this) {
+    DecoderPriority.DEVICE_ONLY -> "hw"
+    DecoderPriority.PREFER_DEVICE -> "hw_plus"
+    DecoderPriority.PREFER_APP -> "sw"
+}
+
+@Composable
+private fun DecoderPriority.shortName(): String = when (this) {
+    DecoderPriority.DEVICE_ONLY -> stringResource(R.string.hw_decoder)
+    DecoderPriority.PREFER_DEVICE -> stringResource(R.string.hw_plus_decoder)
+    DecoderPriority.PREFER_APP -> stringResource(R.string.sw_decoder)
+}
+
 @Composable
 private fun PlayerControl.label(): String = when (this) {
     PlayerControl.PLAYLIST -> stringResource(R.string.now_playing)
@@ -319,6 +352,7 @@ private fun PlayerControl.label(): String = when (this) {
     PlayerControl.SUBTITLE -> stringResource(R.string.subtitle)
     PlayerControl.LOCK -> stringResource(R.string.controls_lock)
     PlayerControl.SCALE -> stringResource(R.string.video_zoom)
+    PlayerControl.DECODER -> stringResource(R.string.decoder)
     PlayerControl.AMBIENCE_MODE -> stringResource(R.string.ambience_mode)
     PlayerControl.VIDEO_FILTERS -> stringResource(R.string.video_filters)
     PlayerControl.PIP -> stringResource(R.string.pip_settings)

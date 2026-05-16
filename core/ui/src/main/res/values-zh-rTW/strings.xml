@@ -66,6 +66,9 @@
     <string name="off">關閉</string>
     <string name="pause_on_headset_disconnect">卸除時暫停</string>
     <string name="prefer_app_decoders">優先選擇應用解碼器</string>
+    <string name="hw_decoder">HW</string>
+    <string name="hw_plus_decoder">HW+</string>
+    <string name="sw_decoder">SW</string>
     <string name="automatic">自動 (感測器)</string>
     <string name="delete">刪除</string>
     <string name="zoom_gesture">縮放手勢</string>
@@ -184,7 +187,7 @@
     <string name="permission_info">One Player 應用程式需要 \"%1$s\" 權限以存取或播放媒體。沒有它，媒體存取與播放功能將無法工作。要完整地使用此應用程式，請授予權限。</string>
     <string name="settings">設定</string>
     <string name="z_a">Z-A</string>
-    <string name="decoder_desc">解碼器優先等級、影片濾鏡選項</string>
+    <string name="decoder_desc">解碼器、影片濾鏡選項</string>
     <string name="video_orientation">影片方向</string>
     <string name="ambience_mode">氛圍模式</string>
     <string name="remember_player_screen_orientation">記住旋轉方向</string>
@@ -224,7 +227,7 @@
     <string name="subtitle_desc">字幕外觀、播放選項</string>
     <string name="dynamic_theme_description">為應用程式主題套用系統桌布色彩</string>
     <string name="system_default">系統預設</string>
-    <string name="decoder_priority">解碼器優先等級</string>
+    <string name="decoder_priority">解碼器</string>
     <string name="done">完成</string>
     <string name="codec">編解碼器</string>
     <string name="properties">資訊</string>

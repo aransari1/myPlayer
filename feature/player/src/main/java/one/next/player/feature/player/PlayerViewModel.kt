@@ -20,6 +20,7 @@ import one.next.player.core.data.repository.SubtitleFontRepository
 import one.next.player.core.data.repository.buildRemotePlaybackStateKey
 import one.next.player.core.domain.GetSortedPlaylistUseCase
 import one.next.player.core.model.ApplicationPreferences
+import one.next.player.core.model.DecoderPriority
 import one.next.player.core.model.LastPlayerScreenOrientation
 import one.next.player.core.model.LoopMode
 import one.next.player.core.model.PlayerControl
@@ -27,6 +28,7 @@ import one.next.player.core.model.PlayerControlsLayout
 import one.next.player.core.model.PlayerPreferences
 import one.next.player.core.model.Video
 import one.next.player.core.model.VideoContentScale
+import one.next.player.core.model.next
 import one.next.player.core.model.withSubtitleStyleFrom
 import one.next.player.core.model.withVideoFiltersFrom
 import one.next.player.feature.player.extensions.remoteFilePath
@@ -133,6 +135,18 @@ class PlayerViewModel @Inject constructor(
     fun updateVideoContentScale(contentScale: VideoContentScale) {
         viewModelScope.launch {
             preferencesRepository.updatePlayerPreferences { it.copy(playerVideoZoom = contentScale) }
+        }
+    }
+
+    fun switchToNextDecoderPriority() {
+        updateDecoderPriority { it.next() }
+    }
+
+    private fun updateDecoderPriority(transform: (DecoderPriority) -> DecoderPriority) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences {
+                it.copy(decoderPriority = transform(it.decoderPriority))
+            }
         }
     }
 

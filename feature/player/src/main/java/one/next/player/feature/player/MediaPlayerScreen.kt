@@ -675,6 +675,7 @@ internal fun MediaPlayerScreen(
                                     controlButtonsPosition = playerPreferences.controlButtonsPosition,
                                     visiblePlayerControls = visiblePlayerControls,
                                     videoContentScale = videoZoomAndContentScaleState.videoContentScale,
+                                    decoderPriority = playerPreferences.decoderPriority,
                                     isPipSupported = pictureInPictureState.isPipSupported,
                                     isTakingScreenshot = isTakingScreenshot,
                                     itemBounds = playerControlItemBounds,
@@ -753,6 +754,14 @@ internal fun MediaPlayerScreen(
                                         if (!isCustomizingControls) {
                                             controlsVisibilityState.hideControls()
                                             overlayView = OverlayView.VIDEO_CONTENT_SCALE
+                                        }
+                                    },
+                                    onDecoderClick = {
+                                        if (isCustomizingControls) {
+                                            toggleControlVisibility(PlayerControl.DECODER)
+                                        } else {
+                                            controlsVisibilityState.showControls()
+                                            viewModel.switchToNextDecoderPriority()
                                         }
                                     },
                                     onAmbienceModeClick = {
@@ -842,6 +851,7 @@ internal fun MediaPlayerScreen(
                                     bottomLeftControls = bottomLeftControls,
                                     controlButtonsPosition = playerPreferences.controlButtonsPosition,
                                     videoContentScale = videoZoomAndContentScaleState.videoContentScale,
+                                    decoderPriority = playerPreferences.decoderPriority,
                                     isPipSupported = pictureInPictureState.isPipSupported,
                                     pendingSeekPosition = seekGestureState.pendingSeekPosition,
                                     itemBounds = playerControlItemBounds,
@@ -949,6 +959,14 @@ internal fun MediaPlayerScreen(
                                             overlayView = OverlayView.VIDEO_CONTENT_SCALE
                                         }
                                     },
+                                    onDecoderClick = {
+                                        if (isCustomizingControls) {
+                                            toggleControlVisibility(PlayerControl.DECODER)
+                                        } else {
+                                            controlsVisibilityState.showControls()
+                                            viewModel.switchToNextDecoderPriority()
+                                        }
+                                    },
                                     onAmbienceModeClick = {
                                         if (isCustomizingControls) {
                                             toggleControlVisibility(PlayerControl.AMBIENCE_MODE)
@@ -996,6 +1014,7 @@ internal fun MediaPlayerScreen(
                                 control = draggingState.control,
                                 player = player,
                                 videoContentScale = videoZoomAndContentScaleState.videoContentScale,
+                                decoderPriority = playerPreferences.decoderPriority,
                                 isPipSupported = pictureInPictureState.isPipSupported,
                                 isCustomizingControls = true,
                                 visiblePlayerControls = visiblePlayerControls,
@@ -1006,6 +1025,7 @@ internal fun MediaPlayerScreen(
                                 onLockControlsClick = { },
                                 onVideoContentScaleClick = { },
                                 onVideoContentScaleLongClick = { },
+                                onDecoderClick = { },
                                 onAmbienceModeClick = { },
                                 isAmbienceModeEnabled = isAmbienceModeEnabled,
                                 onVideoFiltersClick = { },

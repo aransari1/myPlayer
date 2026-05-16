@@ -5,8 +5,16 @@ import one.next.player.core.model.DecoderPriority
 
 internal fun DecoderPriority.extensionRendererMode(): Int = when (this) {
     DecoderPriority.DEVICE_ONLY -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
-    DecoderPriority.PREFER_DEVICE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+    DecoderPriority.PREFER_DEVICE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
     DecoderPriority.PREFER_APP -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
 }
+
+internal fun DecoderPriority.logName(): String = when (this) {
+    DecoderPriority.DEVICE_ONLY -> "HW"
+    DecoderPriority.PREFER_DEVICE -> "HW+"
+    DecoderPriority.PREFER_APP -> "SW"
+}
+
+internal fun DecoderPriority.shouldRetryWithSoftwareDecoder(): Boolean = this == DecoderPriority.PREFER_DEVICE
 
 internal fun DecoderPriority.shouldUseAudioExtensionFallback(): Boolean = this == DecoderPriority.PREFER_DEVICE
