@@ -4,6 +4,7 @@ import android.app.Activity
 import android.provider.Settings
 import android.view.WindowManager
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsCompat.Type
 import androidx.core.view.WindowInsetsControllerCompat
 
@@ -16,6 +17,18 @@ fun Activity.toggleSystemBars(shouldShowBars: Boolean, @Type.InsetsType types: I
     WindowCompat.getInsetsController(window, window.decorView).apply {
         systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         if (shouldShowBars) show(types) else hide(types)
+    }
+}
+
+fun Activity.togglePlayerSystemBars(shouldShowControls: Boolean) {
+    WindowCompat.getInsetsController(window, window.decorView).apply {
+        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        hide(WindowInsetsCompat.Type.statusBars())
+        if (shouldShowControls) {
+            show(WindowInsetsCompat.Type.navigationBars())
+        } else {
+            hide(WindowInsetsCompat.Type.navigationBars())
+        }
     }
 }
 

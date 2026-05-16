@@ -16,7 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import one.next.player.feature.player.extensions.toggleSystemBars
+import one.next.player.feature.player.extensions.togglePlayerSystemBars
 
 @Composable
 fun rememberControlsVisibilityState(player: Player, hideAfter: Duration): ControlsVisibilityState {
@@ -26,14 +26,12 @@ fun rememberControlsVisibilityState(player: Player, hideAfter: Duration): Contro
     LaunchedEffect(player) { controlsVisibilityState.observe() }
     LaunchedEffect(controlsVisibilityState.isControlsVisible, controlsVisibilityState.isControlsLocked) {
         if (controlsVisibilityState.isControlsLocked) {
-            activity?.toggleSystemBars(shouldShowBars = false)
+            activity?.togglePlayerSystemBars(shouldShowControls = false)
             return@LaunchedEffect
         }
-        if (controlsVisibilityState.isControlsVisible) {
-            activity?.toggleSystemBars(shouldShowBars = true)
-        } else {
-            activity?.toggleSystemBars(shouldShowBars = false)
-        }
+        activity?.togglePlayerSystemBars(
+            shouldShowControls = controlsVisibilityState.isControlsVisible,
+        )
     }
     return controlsVisibilityState
 }
