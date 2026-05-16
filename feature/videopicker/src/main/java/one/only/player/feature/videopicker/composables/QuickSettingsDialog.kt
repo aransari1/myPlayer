@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,6 +46,7 @@ import one.only.player.core.ui.components.CancelButton
 import one.only.player.core.ui.components.DoneButton
 import one.only.player.core.ui.components.NextDialog
 import one.only.player.core.ui.designsystem.NextIcons
+import one.only.player.core.ui.extensions.withBottomFallback
 import one.only.player.feature.videopicker.extensions.name
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -57,6 +59,7 @@ fun QuickSettingsDialog(
     var preferences by remember { mutableStateOf(applicationPreferences) }
 
     NextDialog(
+        modifier = Modifier.padding(PaddingValues(bottom = 0.dp).withBottomFallback()),
         onDismissRequest = onDismiss,
         title = {
             Text(text = stringResource(R.string.quick_settings))
