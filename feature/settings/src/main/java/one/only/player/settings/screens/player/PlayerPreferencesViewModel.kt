@@ -13,6 +13,7 @@ import one.only.player.core.common.extensions.round
 import one.only.player.core.data.repository.PreferencesRepository
 import one.only.player.core.model.ControlButtonsPosition
 import one.only.player.core.model.PlayerControl
+import one.only.player.core.model.PlayerIconStyle
 import one.only.player.core.model.PlayerPreferences
 import one.only.player.core.model.Resume
 import one.only.player.core.model.ScreenOrientation
@@ -50,7 +51,7 @@ class PlayerPreferencesViewModel @Inject constructor(
             is PlayerPreferencesUiEvent.UpdatePreferredControlButtonsPosition -> updatePreferredControlButtonsPosition(event.value)
             is PlayerPreferencesUiEvent.UpdateDefaultPlaybackSpeed -> updateDefaultPlaybackSpeed(event.value)
             is PlayerPreferencesUiEvent.UpdateControlAutoHideTimeout -> updateControlAutoHideTimeout(event.value)
-            PlayerPreferencesUiEvent.ToggleUseClassicPlayerIcons -> toggleUseClassicPlayerIcons()
+            is PlayerPreferencesUiEvent.UpdatePlayerIconStyle -> updatePlayerIconStyle(event.value)
             is PlayerPreferencesUiEvent.UpdateHiddenPlayerControls -> updateHiddenPlayerControls(event.value)
         }
     }
@@ -153,10 +154,10 @@ class PlayerPreferencesViewModel @Inject constructor(
         }
     }
 
-    private fun toggleUseClassicPlayerIcons() {
+    private fun updatePlayerIconStyle(value: PlayerIconStyle) {
         viewModelScope.launch {
             preferencesRepository.updatePlayerPreferences {
-                it.copy(shouldUseClassicPlayerIcons = !it.shouldUseClassicPlayerIcons)
+                it.copy(playerIconStyle = value)
             }
         }
     }
@@ -179,6 +180,7 @@ data class PlayerPreferencesUiState(
 sealed interface PlayerPreferenceDialog {
     data object PlayerScreenOrientationDialog : PlayerPreferenceDialog
     data object ControlButtonsDialog : PlayerPreferenceDialog
+    data object PlayerIconStyleDialog : PlayerPreferenceDialog
 }
 
 sealed interface PlayerPreferencesUiEvent {
@@ -193,6 +195,6 @@ sealed interface PlayerPreferencesUiEvent {
     data class UpdatePreferredControlButtonsPosition(val value: ControlButtonsPosition) : PlayerPreferencesUiEvent
     data class UpdateDefaultPlaybackSpeed(val value: Float) : PlayerPreferencesUiEvent
     data class UpdateControlAutoHideTimeout(val value: Int) : PlayerPreferencesUiEvent
-    data object ToggleUseClassicPlayerIcons : PlayerPreferencesUiEvent
+    data class UpdatePlayerIconStyle(val value: PlayerIconStyle) : PlayerPreferencesUiEvent
     data class UpdateHiddenPlayerControls(val value: Set<PlayerControl>) : PlayerPreferencesUiEvent
 }

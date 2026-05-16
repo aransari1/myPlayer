@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import one.only.player.core.common.extensions.isPipFeatureSupported
 import one.only.player.core.common.extensions.round
 import one.only.player.core.model.ControlButtonsPosition
+import one.only.player.core.model.PlayerIconStyle
 import one.only.player.core.model.PlayerPreferences
 import one.only.player.core.model.ScreenOrientation
 import one.only.player.core.ui.R
@@ -133,13 +134,12 @@ private fun PlayerPreferencesContent(
                     isChecked = uiState.preferences.shouldRememberPlayerScreenOrientation,
                     onClick = { onEvent(PlayerPreferencesUiEvent.ToggleRememberPlayerScreenOrientation) },
                 )
-                PreferenceSwitch(
-                    modifier = Modifier.testTag("switch_settings_player_classic_icons"),
-                    title = stringResource(id = R.string.enable_classic_player_icons),
-                    description = stringResource(id = R.string.enable_classic_player_icons_description),
+                ClickablePreferenceItem(
+                    modifier = Modifier.testTag("item_settings_player_icon_style"),
+                    title = stringResource(id = R.string.player_icon_style),
+                    description = uiState.preferences.playerIconStyle.name(),
                     icon = NextIcons.Style,
-                    isChecked = uiState.preferences.shouldUseClassicPlayerIcons,
-                    onClick = { onEvent(PlayerPreferencesUiEvent.ToggleUseClassicPlayerIcons) },
+                    onClick = { onEvent(PlayerPreferencesUiEvent.ShowDialog(PlayerPreferenceDialog.PlayerIconStyleDialog)) },
                     isLastItem = true,
                 )
             }
@@ -272,6 +272,25 @@ private fun PlayerPreferencesContent(
                                 isSelected = it == uiState.preferences.controlButtonsPosition,
                                 onClick = {
                                     onEvent(PlayerPreferencesUiEvent.UpdatePreferredControlButtonsPosition(it))
+                                    onEvent(PlayerPreferencesUiEvent.ShowDialog(null))
+                                },
+                            )
+                        }
+                    }
+                }
+
+                PlayerPreferenceDialog.PlayerIconStyleDialog -> {
+                    OptionsDialog(
+                        text = stringResource(id = R.string.player_icon_style),
+                        onDismissClick = { onEvent(PlayerPreferencesUiEvent.ShowDialog(null)) },
+                    ) {
+                        items(PlayerIconStyle.entries.toTypedArray()) {
+                            RadioTextButton(
+                                modifier = Modifier.testTag("option_settings_player_icon_style_${it.name.lowercase()}"),
+                                text = it.name(),
+                                isSelected = it == uiState.preferences.playerIconStyle,
+                                onClick = {
+                                    onEvent(PlayerPreferencesUiEvent.UpdatePlayerIconStyle(it))
                                     onEvent(PlayerPreferencesUiEvent.ShowDialog(null))
                                 },
                             )

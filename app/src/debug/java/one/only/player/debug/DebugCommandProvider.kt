@@ -31,6 +31,7 @@ import one.only.player.core.model.ControlButtonsPosition
 import one.only.player.core.model.DecoderPriority
 import one.only.player.core.model.DoubleTapGesture
 import one.only.player.core.model.Font
+import one.only.player.core.model.PlayerIconStyle
 import one.only.player.core.model.PlayerPreferences
 import one.only.player.core.model.Resume
 import one.only.player.core.model.ScreenOrientation
@@ -364,8 +365,9 @@ class DebugCommandProvider : ContentProvider() {
             "player.remember_orientation" -> updatePlayerBoolean(value) { preferences, isEnabled ->
                 preferences.copy(shouldRememberPlayerScreenOrientation = isEnabled, lastPlayerScreenOrientation = null)
             }
-            "player.classic_icons" -> updatePlayerBoolean(value) { preferences, isEnabled ->
-                preferences.copy(shouldUseClassicPlayerIcons = isEnabled)
+            "player.icon_style" -> {
+                val style = enumValue<PlayerIconStyle>(value.requiredString(EXTRA_VALUE))
+                preferencesRepository().updatePlayerPreferences { it.copy(playerIconStyle = style) }
             }
             "player.resume" -> {
                 val resume = enumValue<Resume>(value.requiredString(EXTRA_VALUE))
@@ -506,7 +508,6 @@ class DebugCommandProvider : ContentProvider() {
             "media.ignore_nomedia" -> toggleApplication { it.copy(shouldIgnoreNoMediaFiles = !it.shouldIgnoreNoMediaFiles) }
             "media.recycle_bin" -> toggleApplication { it.copy(isRecycleBinEnabled = !it.isRecycleBinEnabled) }
             "player.remember_orientation" -> togglePlayer { it.copy(shouldRememberPlayerScreenOrientation = !it.shouldRememberPlayerScreenOrientation, lastPlayerScreenOrientation = null) }
-            "player.classic_icons" -> togglePlayer { it.copy(shouldUseClassicPlayerIcons = !it.shouldUseClassicPlayerIcons) }
             "player.resume" -> togglePlayer { it.copy(resume = if (it.resume == Resume.YES) Resume.NO else Resume.YES) }
             "player.autoplay" -> togglePlayer { it.copy(shouldAutoPlay = !it.shouldAutoPlay) }
             "player.auto_pip" -> togglePlayer { it.copy(shouldAutoEnterPip = !it.shouldAutoEnterPip) }

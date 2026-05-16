@@ -44,8 +44,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import one.only.player.core.model.PlayerIconStyle
 import one.only.player.core.ui.designsystem.NextIcons
-import one.only.player.feature.player.LocalShouldUseClassicPlayerIcons
+import one.only.player.feature.player.LocalPlayerIconStyle
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -98,7 +99,7 @@ fun PlayerButton(
     }
 
     val colorScheme = MaterialTheme.colorScheme
-    val shouldUseClassicPlayerIcons = LocalShouldUseClassicPlayerIcons.current
+    val playerIconStyle = LocalPlayerIconStyle.current
     val selectionBadgeBackgroundColor = colorScheme.primaryContainer
     val selectionBadgeInactiveColor = colorScheme.surfaceContainerHighest
     val customizeBorderColor = Color(0xFFFFEB3B)
@@ -138,46 +139,63 @@ fun PlayerButton(
         )
     }
 
+    val whiteRippleConfiguration = RippleConfiguration(
+        color = Color.White,
+        rippleAlpha = RippleAlpha(
+            pressedAlpha = 0.5f,
+            focusedAlpha = 0.5f,
+            draggedAlpha = 0.5f,
+            hoveredAlpha = 0.5f,
+        ),
+    )
+
     val buttonWithBadge: @Composable () -> Unit = {
         Box(
             modifier = Modifier.size(buttonSize),
             contentAlignment = Alignment.Center,
         ) {
-            if (shouldUseClassicPlayerIcons) {
-                CompositionLocalProvider(
-                    LocalContentColor provides Color.White,
-                    LocalRippleConfiguration provides RippleConfiguration(
-                        color = Color.White,
-                        rippleAlpha = RippleAlpha(
-                            pressedAlpha = 0.5f,
-                            focusedAlpha = 0.5f,
-                            draggedAlpha = 0.5f,
-                            hoveredAlpha = 0.5f,
-                        ),
-                    ),
-                ) {
-                    IconButton(
+            when (playerIconStyle) {
+                PlayerIconStyle.CLASSIC -> {
+                    val backgroundModifier = if (isOutlineOnly) outlineModifier else Modifier
+                    CompositionLocalProvider(
+                        LocalContentColor provides if (isOutlineOnly) colorScheme.primary else Color.White,
+                        LocalRippleConfiguration provides whiteRippleConfiguration,
+                    ) {
+                        IconButton(
+                            onClick = {},
+                            enabled = isEnabled,
+                            modifier = Modifier.size(buttonSize).then(backgroundModifier),
+                            interactionSource = interactionSource,
+                            content = buttonContent,
+                        )
+                    }
+                }
+
+                PlayerIconStyle.TONAL, PlayerIconStyle.TRANSLUCENT -> {
+                    val containerColor = when {
+                        isOutlineOnly -> colorScheme.surface.copy(alpha = 0f)
+                        playerIconStyle == PlayerIconStyle.TRANSLUCENT -> colorScheme.primary.copy(alpha = 0.20f)
+                        else -> colorScheme.primary
+                    }
+                    val contentColor = when {
+                        isOutlineOnly -> colorScheme.primary
+                        playerIconStyle == PlayerIconStyle.TRANSLUCENT -> Color.White
+                        else -> colorScheme.onPrimary
+                    }
+                    FilledTonalIconButton(
                         onClick = {},
                         enabled = isEnabled,
                         modifier = Modifier.size(buttonSize).then(if (isOutlineOnly) outlineModifier else Modifier),
                         interactionSource = interactionSource,
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = containerColor,
+                            contentColor = contentColor,
+                            disabledContainerColor = colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
+                            disabledContentColor = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        ),
                         content = buttonContent,
                     )
                 }
-            } else {
-                FilledTonalIconButton(
-                    onClick = {},
-                    enabled = isEnabled,
-                    modifier = Modifier.size(buttonSize).then(if (isOutlineOnly) outlineModifier else Modifier),
-                    interactionSource = interactionSource,
-                    colors = IconButtonDefaults.filledTonalIconButtonColors(
-                        containerColor = if (isOutlineOnly) colorScheme.surface.copy(alpha = 0f) else colorScheme.primary,
-                        contentColor = if (isOutlineOnly) colorScheme.primary else colorScheme.onPrimary,
-                        disabledContainerColor = colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
-                        disabledContentColor = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    ),
-                    content = buttonContent,
-                )
             }
 
             if (shouldShowSelectionBadge && !isOutlineOnly) {

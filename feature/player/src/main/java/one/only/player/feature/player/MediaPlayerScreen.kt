@@ -83,6 +83,7 @@ import one.only.player.core.model.DecoderPriority
 import one.only.player.core.model.PlayerControl
 import one.only.player.core.model.PlayerControlZone
 import one.only.player.core.model.PlayerControlsLayout
+import one.only.player.core.model.PlayerIconStyle
 import one.only.player.core.model.PlayerPreferences
 import one.only.player.core.ui.R as coreUiR
 import one.only.player.core.ui.components.OptionsDialog
@@ -126,7 +127,7 @@ import one.only.player.feature.player.ui.controls.PlayerCustomizableControlButto
 private const val TAG = "MediaPlayerScreen"
 
 val LocalControlsVisibilityState = compositionLocalOf<ControlsVisibilityState?> { null }
-val LocalShouldUseClassicPlayerIcons = compositionLocalOf { false }
+val LocalPlayerIconStyle = compositionLocalOf { PlayerIconStyle.TONAL }
 
 internal data class LongPressOverlayUiState(
     val speedText: String,
@@ -646,7 +647,7 @@ internal fun MediaPlayerScreen(
 
     CompositionLocalProvider(
         LocalControlsVisibilityState provides controlsVisibilityState,
-        LocalShouldUseClassicPlayerIcons provides playerPreferences.shouldUseClassicPlayerIcons,
+        LocalPlayerIconStyle provides playerPreferences.playerIconStyle,
     ) {
         Box {
             Box(
