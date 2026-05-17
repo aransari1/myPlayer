@@ -17,4 +17,5 @@ data class RemoteServer(
 enum class ServerProtocol {
     WEBDAV,
     SMB,
+    FTP,
 }

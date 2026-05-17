@@ -133,6 +133,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.github.anilbeesetti.nextlib.mediainfo)
+    implementation(libs.commons.net)
     implementation(libs.okhttp)
     implementation(libs.smbj)
 

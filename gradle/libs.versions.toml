@@ -26,6 +26,7 @@ junit4 = "4.13.2"
 kotlin = "2.3.21"
 kotlinxCoroutines = "1.11.0"
 kotlinxSerializationJson = "1.11.0"
+commonsNet = "3.11.1"
 ksp = "2.3.8"
 ktlint = "14.2.0"
 libassAndroid = "0.4.0"
@@ -77,6 +78,7 @@ androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "
 androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidxEspresso" }
 androidx-test-ext = { module = "androidx.test.ext:junit-ktx", version.ref = "androidxTestExt" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+commons-net = { module = "commons-net:commons-net", version.ref = "commonsNet" }
 github-albfernandez-juniversalchardet = { module = "com.github.albfernandez:juniversalchardet", version.ref = "universalChardet" }
 github-anilbeesetti-nextlib-media3ext = { module = "io.github.anilbeesetti:nextlib-media3ext", version.ref = "nextlib" }
 github-anilbeesetti-nextlib-mediainfo = { module = "io.github.anilbeesetti:nextlib-mediainfo", version.ref = "nextlib" }

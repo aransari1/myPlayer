@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import one.only.player.core.common.Dispatcher
 import one.only.player.core.common.NextDispatchers
 import one.only.player.core.data.models.RemotePlaybackInfo
+import one.only.player.core.data.remote.FtpClient
 import one.only.player.core.data.remote.SmbClient
 import one.only.player.core.data.remote.WebDavClient
 import one.only.player.core.data.repository.MediaRepository
@@ -37,6 +38,7 @@ class CloudBrowseViewModel @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
     private val webDavClient: WebDavClient,
     private val smbClient: SmbClient,
+    private val ftpClient: FtpClient,
     @Dispatcher(NextDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
@@ -101,6 +103,7 @@ class CloudBrowseViewModel @Inject constructor(
             when (server.protocol) {
                 ServerProtocol.WEBDAV -> loadWebDavDirectory(server, path)
                 ServerProtocol.SMB -> loadSmbDirectory(server, path)
+                ServerProtocol.FTP -> loadFtpDirectory(server, path)
             }
         }
     }
@@ -167,6 +170,40 @@ class CloudBrowseViewModel @Inject constructor(
             }
     }
 
+    private suspend fun loadFtpDirectory(server: RemoteServer, path: String) {
+        ftpClient.listDirectory(server, path)
+            .onSuccess { files ->
+                val browsableFiles = files.filterBrowsableFiles()
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        files = browsableFiles,
+                        isError = false,
+                        errorMessage = "",
+                        playbackStates = emptyMap(),
+                        restoreTargetFilePath = null,
+                        hasLoadedDirectory = true,
+                    )
+                }
+                loadPlaybackStates(
+                    server = server,
+                    directoryPath = path,
+                    files = browsableFiles,
+                )
+            }
+            .onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        isError = true,
+                        errorMessage = error.message ?: "Unknown error",
+                    )
+                }
+            }
+    }
+
     private fun loadPlaybackStates(
         server: RemoteServer? = _uiState.value.server,
         directoryPath: String = _uiState.value.currentPath,
@@ -187,6 +224,7 @@ class CloudBrowseViewModel @Inject constructor(
         val protocol = when (currentServer.protocol) {
             ServerProtocol.WEBDAV -> "webdav"
             ServerProtocol.SMB -> return
+            ServerProtocol.FTP -> "ftp"
         }
 
         val pathToKey = videoFiles.mapNotNull { file ->
@@ -232,6 +270,7 @@ class CloudBrowseViewModel @Inject constructor(
                 val port = server.port ?: 445
                 "smb://${server.host}:$port${file.path}"
             }
+            ServerProtocol.FTP -> ftpClient.buildFileUrl(server, file.path)
         }
     }
 
@@ -246,6 +285,7 @@ class CloudBrowseViewModel @Inject constructor(
                         val port = server.port ?: 445
                         "smb://${server.host}:$port${file.path}"
                     }
+                    ServerProtocol.FTP -> ftpClient.buildFileUrl(server, file.path)
                 }
             }
             .map { Uri.parse(it) }
@@ -274,6 +314,16 @@ class CloudBrowseViewModel @Inject constructor(
                 if (server.username.isNotBlank()) {
                     put("_smb_username", server.username)
                     put("_smb_password", server.password)
+                }
+            }
+
+            ServerProtocol.FTP -> buildMap {
+                put("_remote_server_id", server.id.toString())
+                put("_remote_file_path", file.path)
+                put("_remote_protocol", "ftp")
+                if (server.username.isNotBlank()) {
+                    put("_ftp_username", server.username)
+                    put("_ftp_password", server.password)
                 }
             }
         }

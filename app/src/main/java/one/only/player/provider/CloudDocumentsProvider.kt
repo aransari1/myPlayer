@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import one.only.player.core.common.Logger
+import one.only.player.core.data.remote.FtpClient
 import one.only.player.core.data.remote.SmbClient
 import one.only.player.core.data.remote.SmbClient.Companion.extractRelativePath
 import one.only.player.core.data.remote.SmbClient.Companion.extractShareName
@@ -43,6 +44,9 @@ class CloudDocumentsProvider : DocumentsProvider() {
     }
     private val webDavClient: WebDavClient by lazy {
         entryPoint.webDavClient()
+    }
+    private val ftpClient: FtpClient by lazy {
+        entryPoint.ftpClient()
     }
 
     private val entryPoint: CloudDocumentsProviderEntryPoint by lazy {
@@ -130,6 +134,7 @@ class CloudDocumentsProvider : DocumentsProvider() {
         return when (server.protocol) {
             ServerProtocol.WEBDAV -> openWebDavDocument(server, parsed.path, signal)
             ServerProtocol.SMB -> openSmbDocument(server, parsed.path, signal)
+            ServerProtocol.FTP -> openFtpDocument(server, parsed.path, signal)
         }
     }
 
@@ -290,6 +295,12 @@ class CloudDocumentsProvider : DocumentsProvider() {
             }
         }
         ServerProtocol.SMB -> listSmbDirectory(server, path)
+        ServerProtocol.FTP -> kotlinx.coroutines.runBlocking {
+            ftpClient.listDirectory(server, path).getOrElse { exception ->
+                Logger.error(TAG, "Failed to list FTP directory", exception)
+                emptyList()
+            }
+        }
     }
 
     private fun listSmbDirectory(server: RemoteServer, path: String): List<RemoteFile> = runCatching {
@@ -411,6 +422,58 @@ class CloudDocumentsProvider : DocumentsProvider() {
                 Logger.error(TAG, "Failed to stream WebDAV document", exception)
             } finally {
                 response.close()
+            }
+        }.start()
+        return pipe[0]
+    }
+
+    private fun openFtpDocument(
+        server: RemoteServer,
+        path: String,
+        signal: CancellationSignal?,
+    ): ParcelFileDescriptor {
+        val client = org.apache.commons.net.ftp.FTPClient().apply {
+            connectTimeout = FtpClient.CONNECT_TIMEOUT_MS
+            dataTimeout = java.time.Duration.ofMillis(FtpClient.DATA_TIMEOUT_MS.toLong())
+        }
+        client.connect(server.host, server.port ?: FtpClient.DEFAULT_PORT)
+        val loginOk = if (server.username.isBlank()) {
+            client.login("anonymous", "")
+        } else {
+            client.login(server.username, server.password)
+        }
+        if (!loginOk) {
+            runCatching { client.disconnect() }
+            throw FileNotFoundException("FTP login failed")
+        }
+
+        client.enterLocalPassiveMode()
+        client.setFileType(org.apache.commons.net.ftp.FTPClient.BINARY_FILE_TYPE)
+        val input = client.retrieveFileStream(path) ?: throw FileNotFoundException("FTP file not found")
+        val pipe = ParcelFileDescriptor.createReliablePipe()
+
+        signal?.setOnCancelListener {
+            runCatching { pipe[0].close() }
+            runCatching { pipe[1].close() }
+            runCatching { input.close() }
+            runCatching { client.completePendingCommand() }
+            runCatching { if (client.isConnected) client.logout() }
+            runCatching { if (client.isConnected) client.disconnect() }
+        }
+
+        Thread {
+            try {
+                ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { output ->
+                    input.use { source ->
+                        source.copyTo(output)
+                    }
+                }
+                client.completePendingCommand()
+            } catch (exception: Exception) {
+                Logger.error(TAG, "Failed to stream FTP document", exception)
+            } finally {
+                runCatching { if (client.isConnected) client.logout() }
+                runCatching { if (client.isConnected) client.disconnect() }
             }
         }.start()
         return pipe[0]
@@ -666,4 +729,5 @@ class CloudDocumentsProvider : DocumentsProvider() {
 interface CloudDocumentsProviderEntryPoint {
     fun remoteServerRepository(): RemoteServerRepository
     fun webDavClient(): WebDavClient
+    fun ftpClient(): FtpClient
 }

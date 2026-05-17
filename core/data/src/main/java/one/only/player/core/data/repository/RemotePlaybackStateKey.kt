@@ -3,17 +3,17 @@ package one.only.player.core.data.repository
 import java.net.URLDecoder
 
 private const val REMOTE_PLAYBACK_STATE_PREFIX = "onlyplayer://remote"
-private const val WEBDAV_PROTOCOL = "webdav"
+private val SUPPORTED_REMOTE_PROTOCOLS = setOf("webdav", "ftp")
 
 fun buildRemotePlaybackStateKey(
     remoteProtocol: String?,
     remoteServerId: Long?,
     remoteFilePath: String?,
 ): String? {
-    if (remoteProtocol?.lowercase() != WEBDAV_PROTOCOL) return null
+    val protocol = remoteProtocol?.lowercase()?.takeIf { it in SUPPORTED_REMOTE_PROTOCOLS } ?: return null
     val serverId = remoteServerId?.takeIf { it > 0L } ?: return null
     val normalizedPath = remoteFilePath.normalizeRemotePlaybackPath() ?: return null
-    return "$REMOTE_PLAYBACK_STATE_PREFIX/$WEBDAV_PROTOCOL/$serverId$normalizedPath"
+    return "$REMOTE_PLAYBACK_STATE_PREFIX/$protocol/$serverId$normalizedPath"
 }
 
 fun buildPlaybackStateCandidates(

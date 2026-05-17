@@ -69,6 +69,7 @@ fun newServerTemplate(protocol: ServerProtocol) = RemoteServer(
     port = when (protocol) {
         ServerProtocol.WEBDAV -> null
         ServerProtocol.SMB -> 445
+        ServerProtocol.FTP -> 21
     },
     path = "/",
 )

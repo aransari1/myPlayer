@@ -101,6 +101,7 @@ import one.only.player.core.common.extensions.getLocalSubtitles
 import one.only.player.core.common.extensions.getPath
 import one.only.player.core.common.extensions.matchesSubtitleBase
 import one.only.player.core.common.extensions.subtitleCacheDir
+import one.only.player.core.data.remote.FtpClient
 import one.only.player.core.data.remote.SmbClient
 import one.only.player.core.data.remote.WebDavClient
 import one.only.player.core.data.repository.MediaRepository
@@ -119,6 +120,7 @@ import one.only.player.core.model.ServerProtocol
 import one.only.player.core.ui.R as coreUiR
 import one.only.player.feature.player.PlayerActivity
 import one.only.player.feature.player.R
+import one.only.player.feature.player.datasource.FtpDataSource
 import one.only.player.feature.player.datasource.SmbDataSource
 import one.only.player.feature.player.engine.media3.MkvCuesParser
 import one.only.player.feature.player.engine.media3.SeekMapInjectingExtractor
@@ -160,6 +162,9 @@ class PlayerService : MediaSessionService() {
         private const val FAST_SEEK_MIN_DELTA_MS = 2_000L
         private const val STARTUP_PRECISE_RESUME_THRESHOLD_MS = 10_000L
         private const val MKV_CUES_CACHE_MAGIC = 0x4E505145
+        private val DIRECT_SUBTITLE_URI_SCHEMES = setOf("smb", "ftp")
+        private val REMOTE_SOURCE_URI_SCHEMES = setOf("smb", "ftp")
+
         private val ISO_639_2T_TO_1 = mapOf(
             "zho" to "zh", "chi" to "zh",
             "eng" to "en",
@@ -205,6 +210,9 @@ class PlayerService : MediaSessionService() {
 
     @Inject
     lateinit var smbClient: SmbClient
+
+    @Inject
+    lateinit var ftpClient: FtpClient
 
     @Inject
     lateinit var imageLoader: ImageLoader
@@ -1824,7 +1832,7 @@ class PlayerService : MediaSessionService() {
                 validExternalSubs.forEach(onlineSubtitleRepository::touchSubtitle)
                 val existingSubConfigurations = mediaItem.localConfiguration?.subtitleConfigurations ?: emptyList()
                 val restoredSubConfigurations = validExternalSubs.map { subtitleUri ->
-                    if (subtitleUri.scheme == "smb") {
+                    if (subtitleUri.scheme in DIRECT_SUBTITLE_URI_SCHEMES) {
                         buildDirectSubtitleConfiguration(subtitleUri)
                     } else {
                         uriToSubtitleConfiguration(
@@ -2039,7 +2047,7 @@ class PlayerService : MediaSessionService() {
     private fun createMediaSource(mediaItem: MediaItem): MediaSource {
         val requestHeaders = mediaItem.mediaMetadata.requestHeaders
         val uri = mediaItem.localConfiguration?.uri
-        val isRemoteSource = uri?.scheme == "smb" || requestHeaders.isNotEmpty()
+        val isRemoteSource = uri?.scheme in REMOTE_SOURCE_URI_SCHEMES || requestHeaders.isNotEmpty()
         val dataSourceFactory = createDataSourceFactory(uri, requestHeaders)
         val cachedSeekMap = mkvSeekMapCache[mediaItem.mediaId]
         if (cachedSeekMap != null) {
@@ -2093,6 +2101,11 @@ class PlayerService : MediaSessionService() {
             val username = requestHeaders["_smb_username"].orEmpty()
             val password = requestHeaders["_smb_password"].orEmpty()
             return SmbDataSource.Factory(username, password)
+        }
+        if (uri?.scheme == "ftp") {
+            val username = requestHeaders["_ftp_username"].orEmpty()
+            val password = requestHeaders["_ftp_password"].orEmpty()
+            return FtpDataSource.Factory(username, password)
         }
 
         val httpHeaders = requestHeaders.filterKeys { !it.startsWith("_") }
@@ -2495,7 +2508,7 @@ class PlayerService : MediaSessionService() {
         if (allExternalSubs.isEmpty()) return emptyList()
 
         return allExternalSubs.map { subtitleUri ->
-            if (subtitleUri.scheme == "smb") {
+            if (subtitleUri.scheme in DIRECT_SUBTITLE_URI_SCHEMES) {
                 buildDirectSubtitleConfiguration(subtitleUri)
             } else {
                 uriToSubtitleConfiguration(
@@ -2516,6 +2529,7 @@ class PlayerService : MediaSessionService() {
         val excludedUris = excludeSubsList.map(Uri::toString).toSet()
         val subtitleFiles = when (videoUri.scheme) {
             "smb" -> listRemoteSmbDirectory(videoUri, requestHeaders)
+            "ftp" -> listRemoteFtpDirectory(videoUri, requestHeaders)
             "http", "https" -> listRemoteWebDavDirectory(videoUri, requestHeaders)
             else -> emptyList()
         }
@@ -2567,6 +2581,28 @@ class PlayerService : MediaSessionService() {
             password = requestHeaders["_webdav_password"].orEmpty(),
         )
         return webDavClient.listDirectory(server, directoryPath).getOrElse { emptyList() }
+    }
+
+    private suspend fun listRemoteFtpDirectory(
+        videoUri: Uri,
+        requestHeaders: Map<String, String>,
+    ): List<RemoteFile> {
+        val host = videoUri.host ?: return emptyList()
+        val directoryPath = videoUri.path
+            ?.substringBeforeLast('/', missingDelimiterValue = "")
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "$it/" }
+            ?: "/"
+        val server = RemoteServer(
+            name = host,
+            protocol = ServerProtocol.FTP,
+            host = host,
+            port = videoUri.port.takeIf { it > 0 },
+            path = directoryPath,
+            username = requestHeaders["_ftp_username"].orEmpty(),
+            password = requestHeaders["_ftp_password"].orEmpty(),
+        )
+        return ftpClient.listDirectory(server, directoryPath).getOrElse { emptyList() }
     }
 
     private fun buildRemoteSubtitleUri(videoUri: Uri, remoteFile: RemoteFile): Uri = Uri.parse(

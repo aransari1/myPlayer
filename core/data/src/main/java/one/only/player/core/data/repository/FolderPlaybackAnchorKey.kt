@@ -3,17 +3,17 @@ package one.only.player.core.data.repository
 import java.net.URLDecoder
 
 private const val REMOTE_FOLDER_PLAYBACK_ANCHOR_PREFIX = "onlyplayer://folder"
-private const val WEBDAV_PROTOCOL = "webdav"
+private val SUPPORTED_REMOTE_PROTOCOLS = setOf("webdav", "ftp")
 
 fun buildRemoteFolderPlaybackAnchorKey(
     remoteProtocol: String?,
     remoteServerId: Long?,
     directoryPath: String?,
 ): String? {
-    if (remoteProtocol?.lowercase() != WEBDAV_PROTOCOL) return null
+    val protocol = remoteProtocol?.lowercase()?.takeIf { it in SUPPORTED_REMOTE_PROTOCOLS } ?: return null
     val serverId = remoteServerId?.takeIf { it > 0L } ?: return null
     val normalizedPath = directoryPath?.normalizeFolderPlaybackAnchorPath() ?: return null
-    return "$REMOTE_FOLDER_PLAYBACK_ANCHOR_PREFIX/$WEBDAV_PROTOCOL/$serverId$normalizedPath"
+    return "$REMOTE_FOLDER_PLAYBACK_ANCHOR_PREFIX/$protocol/$serverId$normalizedPath"
 }
 
 fun String.normalizeFolderPlaybackAnchorPath(): String? {
