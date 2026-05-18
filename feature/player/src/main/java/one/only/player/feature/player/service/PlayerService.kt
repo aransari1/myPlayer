@@ -1294,6 +1294,17 @@ class PlayerService : MediaSessionService() {
             transition = transition,
             decoderPriority = decoderPriority,
         )
+        // 无滤镜且 pipeline 未启用时不下发空 effects，避免接管 MediaCodec 直通导致 HDR 视频走 SDR 处理
+        if (effects.isEmpty() && activeVideoFiltersEffect == null) {
+            currentVideoEffectsState = VideoEffectsState(
+                filters = videoFilters,
+                decoderPriority = decoderPriority,
+                isPipelineInitialized = false,
+            )
+            Logger.debug(TAG, "Skip setVideoEffects: no filters and pipeline not initialized")
+            updateCurrentVideoEffectsAvailability(player)
+            return
+        }
         videoFilterTransition = if (effects.isEmpty()) VideoFilterTransition.default() else transition
         currentVideoEffectsState = VideoEffectsState(
             filters = videoFilters,
