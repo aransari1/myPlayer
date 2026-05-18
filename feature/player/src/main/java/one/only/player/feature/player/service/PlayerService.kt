@@ -279,6 +279,7 @@ class PlayerService : MediaSessionService() {
         decoderPriority = DecoderPriority.AUTOMATIC,
     )
     private var activeVideoFiltersEffect: VideoFiltersEffect? = null
+    private var isCurrentVideoHdr = false
     private var pendingVideoFiltersJob: Job? = null
     private var videoFilterTransition = VideoFilterTransition.default()
     private lateinit var fastStartMediaSourceFactory: DefaultMediaSourceFactory
@@ -394,6 +395,7 @@ class PlayerService : MediaSessionService() {
                 handleRepeatedPlayback(mediaSession?.player ?: return)
                 return
             }
+            isCurrentVideoHdr = false
             pendingPreciseSeekPromotionJob?.cancel()
             pendingPreciseSeekPromotionJob = null
             pendingStartupPreciseResumeToken = null
@@ -644,9 +646,11 @@ class PlayerService : MediaSessionService() {
             val width = format?.width ?: 0
             val height = format?.height ?: 0
             val rotation = format?.rotationDegrees ?: 0
+            val transfer = format?.colorInfo?.colorTransfer
+            isCurrentVideoHdr = transfer == C.COLOR_TRANSFER_ST2084 || transfer == C.COLOR_TRANSFER_HLG
             Logger.info(
                 TAG,
-                "startup firstFrameReady format=${width}x$height rot=$rotation duration=${player.duration} seekable=${player.isCurrentMediaItemSeekable}",
+                "startup firstFrameReady format=${width}x$height rot=$rotation duration=${player.duration} seekable=${player.isCurrentMediaItemSeekable} hdr=$isCurrentVideoHdr",
             )
 
             val duration = player.duration.takeIf { it != C.TIME_UNSET }
@@ -665,6 +669,8 @@ class PlayerService : MediaSessionService() {
                 updatedMediaItem,
             )
             continueDeferredStartupPreciseResume(updatedMediaItem)
+            // HDR 状态由首帧确定，重评 effects 决策以同步 pipeline
+            (player as? ExoPlayer)?.let { applyVideoFilters(it, playerPreferences) }
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -1420,7 +1426,7 @@ class PlayerService : MediaSessionService() {
     private fun shouldUseVideoFiltersEffect(
         filters: VideoFilterPreferences,
         decoderPriority: DecoderPriority,
-    ): Boolean = shouldApplyVideoEffects(decoderPriority) && filters.shouldCreateEffect()
+    ): Boolean = shouldApplyVideoEffects(decoderPriority) && !isCurrentVideoHdr && filters.shouldCreateEffect()
 
     private fun String.toLogSummary(): String = Uri.parse(this).toLogSummary()
 
