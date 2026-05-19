@@ -280,6 +280,7 @@ class PlayerService : MediaSessionService() {
     )
     private var activeVideoFiltersEffect: VideoFiltersEffect? = null
     private var isCurrentVideoHdr = false
+    private var hasRenderedFirstFrameForCurrentItem = false
     private var pendingVideoFiltersJob: Job? = null
     private var videoFilterTransition = VideoFilterTransition.default()
     private lateinit var fastStartMediaSourceFactory: DefaultMediaSourceFactory
@@ -396,6 +397,7 @@ class PlayerService : MediaSessionService() {
                 return
             }
             isCurrentVideoHdr = false
+            hasRenderedFirstFrameForCurrentItem = false
             pendingPreciseSeekPromotionJob?.cancel()
             pendingPreciseSeekPromotionJob = null
             pendingStartupPreciseResumeToken = null
@@ -669,8 +671,9 @@ class PlayerService : MediaSessionService() {
                 updatedMediaItem,
             )
             continueDeferredStartupPreciseResume(updatedMediaItem)
-            // HDR 状态由首帧确定，重评 effects 决策以同步 pipeline
-            (player as? ExoPlayer)?.let { applyVideoFilters(it, playerPreferences) }
+            hasRenderedFirstFrameForCurrentItem = true
+            // HDR 状态由首帧确定，强制重评 effects 决策以同步 pipeline
+            (player as? ExoPlayer)?.let { applyVideoFilters(it, playerPreferences, force = true) }
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -1214,6 +1217,7 @@ class PlayerService : MediaSessionService() {
     private fun applyVideoFilters(
         player: ExoPlayer,
         preferences: PlayerPreferences,
+        force: Boolean = false,
     ) {
         val videoFilters = preferences.toVideoFilterPreferences()
         scheduleVideoFilters(
@@ -1222,6 +1226,7 @@ class PlayerService : MediaSessionService() {
             delayMs = 0L,
             shouldSkipStalePreferences = true,
             logPrefix = "Apply",
+            force = force,
         )
     }
 
@@ -1243,9 +1248,10 @@ class PlayerService : MediaSessionService() {
         delayMs: Long,
         shouldSkipStalePreferences: Boolean,
         logPrefix: String,
+        force: Boolean = false,
     ) {
         pendingVideoFiltersJob?.cancel()
-        if (currentVideoEffectsState == VideoEffectsState(videoFilters, activeDecoderPriority, isPipelineInitialized = true)) return
+        if (!force && currentVideoEffectsState == VideoEffectsState(videoFilters, activeDecoderPriority, isPipelineInitialized = true)) return
 
         pendingVideoFiltersJob = serviceScope.launch {
             fun hasStalePreferences() = shouldSkipStalePreferences &&
@@ -1300,6 +1306,11 @@ class PlayerService : MediaSessionService() {
             transition = transition,
             decoderPriority = decoderPriority,
         )
+        // 首帧前 HDR 状态未定，首次建立 GL pipeline 推迟到 onRenderedFirstFrame 后避免 HDR 误接管
+        if (!hasRenderedFirstFrameForCurrentItem && activeVideoFiltersEffect == null && effects.isNotEmpty()) {
+            Logger.debug(TAG, "Defer setVideoEffects until first frame to resolve HDR state")
+            return
+        }
         // 无滤镜且 pipeline 未启用时不下发空 effects，避免接管 MediaCodec 直通导致 HDR 视频走 SDR 处理
         if (effects.isEmpty() && activeVideoFiltersEffect == null) {
             currentVideoEffectsState = VideoEffectsState(
