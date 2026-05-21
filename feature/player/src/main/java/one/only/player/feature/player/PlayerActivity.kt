@@ -169,10 +169,13 @@ class PlayerActivity : AppCompatActivity() {
         private const val TAG = "PlayerActivity"
 
         private val SUBTITLE_DOCUMENT_MIME_TYPES = arrayOf(
+            "application/octet-stream",
             "application/ttml+xml",
             "application/x-ass",
             "application/x-subrip",
             "application/x-ssa",
+            "audio/aac",
+            "text/*",
             "text/plain",
             "text/srt",
             "text/vtt",
