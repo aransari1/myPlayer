@@ -9,6 +9,7 @@ import android.media.audiofx.LoudnessEnhancer
 import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
+import android.provider.MediaStore
 import androidx.annotation.OptIn
 import androidx.core.net.toFile
 import androidx.core.net.toUri
@@ -2044,18 +2045,25 @@ class PlayerService : MediaSessionService() {
         }.awaitAll()
     }
 
-    // 从文件头快速提取时长，用于数据库无记录的外部文件
-    private fun extractDurationMs(uri: Uri): Long? = try {
-        val retriever = MediaMetadataRetriever()
-        retriever.setDataSource(applicationContext, uri)
-        val duration = retriever.extractMetadata(
-            MediaMetadataRetriever.METADATA_KEY_DURATION,
-        )?.toLongOrNull()
-        retriever.release()
-        duration?.takeIf { it > 0L }
-    } catch (_: Exception) {
-        null
+    private fun extractDurationMs(uri: Uri): Long? {
+        if (uri.isNonMediaStoreContentUri()) return null
+
+        var retriever: MediaMetadataRetriever? = null
+        return try {
+            retriever = MediaMetadataRetriever()
+            retriever.setDataSource(applicationContext, uri)
+            val duration = retriever.extractMetadata(
+                MediaMetadataRetriever.METADATA_KEY_DURATION,
+            )?.toLongOrNull()
+            duration?.takeIf { it > 0L }
+        } catch (_: Exception) {
+            null
+        } finally {
+            retriever?.release()
+        }
     }
+
+    private fun Uri.isNonMediaStoreContentUri(): Boolean = scheme == ContentResolver.SCHEME_CONTENT && authority != MediaStore.AUTHORITY
 
     private suspend fun migrateFallbackStateToPlaybackStateUri(
         playbackStateUri: String,

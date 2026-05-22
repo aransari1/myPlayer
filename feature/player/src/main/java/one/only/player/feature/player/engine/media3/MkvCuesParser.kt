@@ -38,15 +38,10 @@ object MkvCuesParser {
     private const val ID_CUE_CLUSTER_POSITION: Long = 0xF1
 
     fun parse(context: Context, uri: Uri): List<MkvCuePoint>? = try {
-        val filePath = getPath(context, uri)
-        if (filePath != null) {
-            parseFile(filePath)
-        } else {
-            when (uri.scheme) {
-                ContentResolver.SCHEME_FILE -> parseFile(uri.path!!)
-                ContentResolver.SCHEME_CONTENT -> parseContent(context, uri)
-                else -> null
-            }
+        when (uri.scheme) {
+            ContentResolver.SCHEME_CONTENT -> parseContent(context, uri)
+            ContentResolver.SCHEME_FILE -> parseFile(uri.path!!)
+            else -> getPath(context, uri)?.let(::parseFile)
         }
     } catch (e: Exception) {
         Logger.error(TAG, "Failed to parse MKV Cues", e)
