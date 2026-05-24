@@ -35,9 +35,9 @@ class DebugCommandProvider : ContentProvider() {
 
         return when (method) {
             METHOD_PAGE_OPEN -> context.openDebugPage(arg)
-            METHOD_SETTINGS_SET -> context.runSettingsCommand(method, arg, extras) { setSetting(arg, extras) }
+            METHOD_SETTINGS_SET -> context.runSettingsCommand(method, arg, extras) { setSetting(context, arg, extras) }
             METHOD_SETTINGS_TOGGLE -> context.runSettingsCommand(method, arg, extras) { toggleSetting(arg) }
-            METHOD_SETTINGS_ACTION -> context.runSettingsCommand(method, arg, extras) { runSettingAction(arg) }
+            METHOD_SETTINGS_ACTION -> context.runSettingsCommand(method, arg, extras) { runSettingAction(context, arg) }
             in CLOUD_SERVER_METHODS -> context.runCloudServerCommand(method.removePrefix("cloud.server."), arg, extras)
             in MEDIA_METHODS -> context.runMediaCommand(method.removePrefix("media."), arg, extras)
             in PLAYER_ACTION_METHODS -> context.runPlayerAction(method.removePrefix("player."), arg, extras.withTarget(arg))

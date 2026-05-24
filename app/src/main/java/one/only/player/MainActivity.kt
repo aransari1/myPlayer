@@ -12,8 +12,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -24,12 +27,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -44,6 +51,7 @@ import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import one.only.player.core.common.AppThemeMode
 import one.only.player.core.common.extensions.applyPrivacyProtection
 import one.only.player.core.common.extensions.resolvePrivacyPreviewScrim
 import one.only.player.core.common.storagePermission
@@ -87,6 +95,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "MainActivity"
         private const val AUTO_REFRESH_INTERVAL_MILLIS = 30_000L
+        private const val STARTUP_SPLASH_MIN_DURATION_MILLIS = 450L
 
         // 进程级时间戳，Activity 重建后不会重置，进程死亡后归零触发全量刷新
         @Volatile
@@ -111,12 +120,15 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         val persistedThemeConfig = readPersistedThemeConfig(dataDir = applicationInfo.dataDir)
+        val bootstrapShouldUseDynamicColors = readPersistedShouldUseDynamicColors(dataDir = applicationInfo.dataDir)
         val bootstrapTheme = resolveBootstrapTheme(
             themeConfig = persistedThemeConfig,
             isSystemDarkTheme = isSystemDarkTheme(resources.configuration),
         )
         setTheme(resolveBootstrapSplashThemeStyle(shouldUseDarkTheme = bootstrapTheme.shouldUseDarkTheme))
+        val splashScreenStartedAt = SystemClock.elapsedRealtime()
         val splashScreen = installSplashScreen()
+        splashScreen.setOnExitAnimationListener { it.remove() }
         super.onCreate(savedInstanceState)
         val bootstrapShouldHideInRecents = readPersistedHideInRecents(dataDir = applicationInfo.dataDir)
         applyPrivacyProtection(
@@ -130,6 +142,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         var uiState: MainActivityUiState by mutableStateOf(MainActivityUiState.Loading)
+        var isStartupSplashReady by mutableStateOf(false)
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -140,19 +153,29 @@ class MainActivity : AppCompatActivity() {
         }
 
         splashScreen.setKeepOnScreenCondition {
-            when (uiState) {
-                MainActivityUiState.Loading -> true
-                is MainActivityUiState.Success -> false
-            }
+            SystemClock.elapsedRealtime() - splashScreenStartedAt < STARTUP_SPLASH_MIN_DURATION_MILLIS
         }
         consumeDebugPageRoute(intent)
 
         setContent {
-            val shouldUseDarkTheme = shouldUseDarkTheme(uiState = uiState)
+            val shouldUseDarkTheme = shouldUseDarkTheme(
+                uiState = uiState,
+                bootstrapShouldUseDarkTheme = bootstrapTheme.shouldUseDarkTheme,
+            )
+            val shouldUseDynamicColor = shouldUseDynamicTheming(
+                uiState = uiState,
+                bootstrapShouldUseDynamicColors = bootstrapShouldUseDynamicColors,
+            )
 
             val preferences = (uiState as? MainActivityUiState.Success)?.preferences
             val shouldPreventScreenshots = preferences?.shouldPreventScreenshots == true
             val shouldHideInRecents = preferences?.shouldHideInRecents == true
+            val shouldShowStartupSplash = uiState == MainActivityUiState.Loading || !isStartupSplashReady
+
+            LaunchedEffect(Unit) {
+                delay(STARTUP_SPLASH_MIN_DURATION_MILLIS)
+                isStartupSplashReady = true
+            }
 
             LaunchedEffect(shouldPreventScreenshots, shouldHideInRecents) {
                 if (preferences == null) return@LaunchedEffect
@@ -171,117 +194,40 @@ class MainActivity : AppCompatActivity() {
 
             OnlyPlayerTheme(
                 shouldUseDarkTheme = shouldUseDarkTheme,
-                shouldUseDynamicColor = shouldUseDynamicTheming(uiState = uiState),
+                shouldUseDynamicColor = shouldUseDynamicColor,
             ) {
-                StartupUpdateDialog(viewModel = viewModel)
+                if (!shouldShowStartupSplash) {
+                    StartupUpdateDialog(viewModel = viewModel)
+                }
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.surface,
                 ) {
-                    val storagePermissionState = rememberRuntimePermissionState(permission = storagePermission)
-
-                    LifecycleEventEffect(event = Lifecycle.Event.ON_START) {
-                        storagePermissionState.launchPermissionRequest()
-                    }
-
-                    LaunchedEffect(storagePermissionState.isGranted) {
-                        if (!storagePermissionState.isGranted) return@LaunchedEffect
-
-                        synchronizer.startSync()
-                        if (lastAutoRefreshAt != 0L) return@LaunchedEffect
-
-                        // 延迟 refresh，让 UI 先用 DB 缓存数据渲染
-                        delay(2000)
-                        synchronizer.refresh()
-                        lastAutoRefreshAt = SystemClock.elapsedRealtime()
-                    }
-
-                    LifecycleEventEffect(event = Lifecycle.Event.ON_RESUME) {
-                        if (!storagePermissionState.isGranted) return@LifecycleEventEffect
-
-                        val now = SystemClock.elapsedRealtime()
-                        if (now - lastAutoRefreshAt < AUTO_REFRESH_INTERVAL_MILLIS) return@LifecycleEventEffect
-
-                        lifecycleScope.launch {
-                            synchronizer.refresh()
-                            lastAutoRefreshAt = SystemClock.elapsedRealtime()
-                        }
-                    }
-
-                    val mainNavController = rememberNavController()
-                    LaunchedEffect(mainNavController, pendingDebugPageRoute) {
-                        val pageRoute = pendingDebugPageRoute ?: return@LaunchedEffect
-                        navigateToDebugPage(mainNavController, pageRoute)
-                        pendingDebugPageRoute = null
-                    }
-                    NavigationBarColorEffect(
-                        activity = this@MainActivity,
-                        navController = mainNavController,
-                        defaultColor = MaterialTheme.colorScheme.background,
-                        settingsColor = MaterialTheme.colorScheme.surface,
-                    )
-
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .semantics {
-                                testTagsAsResourceId = true
+                    if (shouldShowStartupSplash) {
+                        StartupSplashScreen()
+                    } else {
+                        MainAppContent(
+                            onPermissionGranted = {
+                                synchronizer.startSync()
+                                if (lastAutoRefreshAt == 0L) {
+                                    lifecycleScope.launch {
+                                        delay(2000)
+                                        synchronizer.refresh()
+                                        lastAutoRefreshAt = SystemClock.elapsedRealtime()
+                                    }
+                                }
                             },
-                        color = MaterialTheme.colorScheme.surface,
-                    ) {
-                        NavHost(
-                            navController = mainNavController,
-                            startDestination = MediaRootRoute,
-                            enterTransition = {
-                                slideIntoContainer(
-                                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                                    animationSpec = tween(
-                                        durationMillis = 200,
-                                        easing = LinearEasing,
-                                    ),
-                                )
+                            onResumeWithPermission = {
+                                val now = SystemClock.elapsedRealtime()
+                                if (now - lastAutoRefreshAt >= AUTO_REFRESH_INTERVAL_MILLIS) {
+                                    lifecycleScope.launch {
+                                        synchronizer.refresh()
+                                        lastAutoRefreshAt = SystemClock.elapsedRealtime()
+                                    }
+                                }
                             },
-                            exitTransition = {
-                                slideOutOfContainer(
-                                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                                    animationSpec = tween(
-                                        durationMillis = 200,
-                                        easing = LinearEasing,
-                                    ),
-                                    targetOffset = { fullOffset -> (fullOffset * 0.3f).toInt() },
-                                )
-                            },
-                            popEnterTransition = {
-                                slideIntoContainer(
-                                    towards = AnimatedContentTransitionScope.SlideDirection.End,
-                                    animationSpec = tween(
-                                        durationMillis = 200,
-                                        easing = LinearEasing,
-                                    ),
-                                    initialOffset = { fullOffset -> (fullOffset * 0.3f).toInt() },
-                                )
-                            },
-                            popExitTransition = {
-                                slideOutOfContainer(
-                                    towards = AnimatedContentTransitionScope.SlideDirection.End,
-                                    animationSpec = tween(
-                                        durationMillis = 200,
-                                        easing = LinearEasing,
-                                    ),
-                                )
-                            },
-                        ) {
-                            mediaNavGraph(
-                                context = this@MainActivity,
-                                navController = mainNavController,
-                            )
-                            cloudNavGraph(
-                                context = this@MainActivity,
-                                navController = mainNavController,
-                            )
-                            settingsNavGraph(navController = mainNavController)
-                        }
+                        )
                     }
                 }
             }
@@ -323,6 +269,104 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
+    @Composable
+    private fun MainAppContent(
+        onPermissionGranted: () -> Unit,
+        onResumeWithPermission: () -> Unit,
+    ) {
+        val storagePermissionState = rememberRuntimePermissionState(permission = storagePermission)
+
+        LifecycleEventEffect(event = Lifecycle.Event.ON_START) {
+            storagePermissionState.launchPermissionRequest()
+        }
+
+        LaunchedEffect(storagePermissionState.isGranted) {
+            if (!storagePermissionState.isGranted) return@LaunchedEffect
+            onPermissionGranted()
+        }
+
+        LifecycleEventEffect(event = Lifecycle.Event.ON_RESUME) {
+            if (!storagePermissionState.isGranted) return@LifecycleEventEffect
+            onResumeWithPermission()
+        }
+
+        val mainNavController = rememberNavController()
+        LaunchedEffect(mainNavController, pendingDebugPageRoute) {
+            val pageRoute = pendingDebugPageRoute ?: return@LaunchedEffect
+            navigateToDebugPage(mainNavController, pageRoute)
+            pendingDebugPageRoute = null
+        }
+        NavigationBarColorEffect(
+            activity = this@MainActivity,
+            navController = mainNavController,
+            defaultColor = MaterialTheme.colorScheme.background,
+            settingsColor = MaterialTheme.colorScheme.surface,
+        )
+
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .semantics {
+                    testTagsAsResourceId = true
+                },
+            color = MaterialTheme.colorScheme.surface,
+        ) {
+            NavHost(
+                navController = mainNavController,
+                startDestination = MediaRootRoute,
+                enterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = LinearEasing,
+                        ),
+                    )
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = LinearEasing,
+                        ),
+                        targetOffset = { fullOffset -> (fullOffset * 0.3f).toInt() },
+                    )
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = LinearEasing,
+                        ),
+                        initialOffset = { fullOffset -> (fullOffset * 0.3f).toInt() },
+                    )
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = LinearEasing,
+                        ),
+                    )
+                },
+            ) {
+                mediaNavGraph(
+                    context = this@MainActivity,
+                    navController = mainNavController,
+                )
+                cloudNavGraph(
+                    context = this@MainActivity,
+                    navController = mainNavController,
+                )
+                settingsNavGraph(navController = mainNavController)
+            }
+        }
+    }
+
     private fun applySystemBars(
         shouldHideInRecents: Boolean,
         shouldUseDarkTheme: Boolean,
@@ -356,6 +400,12 @@ internal fun resolveBootstrapTheme(
     ThemeConfig.ON -> BootstrapThemeResolution(shouldUseDarkTheme = true)
 }
 
+internal fun ThemeConfig.toAppThemeMode(): AppThemeMode = when (this) {
+    ThemeConfig.SYSTEM -> AppThemeMode.FOLLOW_SYSTEM
+    ThemeConfig.OFF -> AppThemeMode.LIGHT
+    ThemeConfig.ON -> AppThemeMode.DARK
+}
+
 internal fun readPersistedThemeConfig(dataDir: String): ThemeConfig {
     val preferencesFile = File(dataDir, "files/datastore/app_preferences.json")
     if (!preferencesFile.exists()) return ThemeConfig.SYSTEM
@@ -383,6 +433,19 @@ internal fun readPersistedHideInRecents(dataDir: String): Boolean {
         ?: false
 }
 
+internal fun readPersistedShouldUseDynamicColors(dataDir: String): Boolean {
+    val preferencesFile = File(dataDir, "files/datastore/app_preferences.json")
+    if (!preferencesFile.exists()) return true
+
+    return runCatching { preferencesFile.readText() }
+        .getOrNull()
+        ?.let(DYNAMIC_COLORS_PATTERN::find)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.toBooleanStrictOrNull()
+        ?: true
+}
+
 private fun resolveBootstrapSplashThemeStyle(shouldUseDarkTheme: Boolean): Int = if (shouldUseDarkTheme) {
     one.only.player.R.style.Theme_OnlyPlayer_Splash_Dark
 } else {
@@ -393,12 +456,14 @@ private fun isSystemDarkTheme(configuration: Configuration): Boolean = (configur
 
 private val THEME_CONFIG_PATTERN = "\"themeConfig\"\\s*:\\s*\"([A-Z_]+)\"".toRegex()
 private val HIDE_IN_RECENTS_PATTERN = "\"shouldHideInRecents\"\\s*:\\s*(true|false)".toRegex()
+private val DYNAMIC_COLORS_PATTERN = "\"shouldUseDynamicColors\"\\s*:\\s*(true|false)".toRegex()
 
 @Composable
 fun shouldUseDarkTheme(
     uiState: MainActivityUiState,
+    bootstrapShouldUseDarkTheme: Boolean? = null,
 ): Boolean = when (uiState) {
-    MainActivityUiState.Loading -> isSystemInDarkTheme()
+    MainActivityUiState.Loading -> bootstrapShouldUseDarkTheme ?: isSystemInDarkTheme()
     is MainActivityUiState.Success -> when (uiState.preferences.themeConfig) {
         ThemeConfig.SYSTEM -> isSystemInDarkTheme()
         ThemeConfig.OFF -> false
@@ -409,9 +474,34 @@ fun shouldUseDarkTheme(
 @Composable
 fun shouldUseDynamicTheming(
     uiState: MainActivityUiState,
+    bootstrapShouldUseDynamicColors: Boolean = false,
 ): Boolean = when (uiState) {
-    MainActivityUiState.Loading -> false
+    MainActivityUiState.Loading -> bootstrapShouldUseDynamicColors
     is MainActivityUiState.Success -> uiState.preferences.shouldUseDynamicColors
+}
+
+@Composable
+private fun StartupSplashScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics {
+                testTagsAsResourceId = true
+            }
+            .testTag("startup_splash"),
+        contentAlignment = Alignment.Center,
+    ) {
+        StartupSplashIcon(modifier = Modifier.size(108.dp))
+    }
+}
+
+@Composable
+private fun StartupSplashIcon(modifier: Modifier = Modifier) {
+    Image(
+        painter = painterResource(id = R.drawable.ic_splash_icon),
+        contentDescription = null,
+        modifier = modifier,
+    )
 }
 
 @Composable

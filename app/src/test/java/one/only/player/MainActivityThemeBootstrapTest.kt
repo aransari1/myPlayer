@@ -57,6 +57,26 @@ class MainActivityThemeBootstrapTest {
         assertEquals(one.only.player.core.model.ThemeConfig.SYSTEM, result)
     }
 
+    @Test
+    fun readPersistedShouldUseDynamicColors_readsDisabledPreference() {
+        val dataDir = createTempDataDir(
+            content = """{"shouldUseDynamicColors":false}""",
+        )
+
+        val result = readPersistedShouldUseDynamicColors(dataDir = dataDir.absolutePath)
+
+        assertEquals(false, result)
+    }
+
+    @Test
+    fun readPersistedShouldUseDynamicColors_fallsBackToEnabledWhenMissing() {
+        val dataDir = Files.createTempDirectory("theme-bootstrap-dynamic-empty").toFile()
+
+        val result = readPersistedShouldUseDynamicColors(dataDir = dataDir.absolutePath)
+
+        assertEquals(true, result)
+    }
+
     private fun createTempDataDir(
         content: String,
     ): File {

@@ -1,21 +1,26 @@
 package one.only.player.settings.screens.appearance
 
+import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import one.only.player.core.common.AppLanguageManager
+import one.only.player.core.common.AppThemeMode
+import one.only.player.core.common.AppThemeModeManager
 import one.only.player.core.data.repository.PreferencesRepository
 import one.only.player.core.model.ApplicationPreferences
 import one.only.player.core.model.ThemeConfig
 
 @HiltViewModel
 class AppearancePreferencesViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val preferencesRepository: PreferencesRepository,
 ) : ViewModel() {
 
@@ -55,6 +60,10 @@ class AppearancePreferencesViewModel @Inject constructor(
             preferencesRepository.updateApplicationPreferences {
                 it.copy(themeConfig = themeConfig)
             }
+            AppThemeModeManager.applyToCurrent(
+                context = context,
+                mode = themeConfig.toAppThemeMode(),
+            )
         }
     }
 
@@ -91,6 +100,12 @@ data class AppearancePreferencesUiState(
     val showDialog: AppearancePreferenceDialog? = null,
     val preferences: ApplicationPreferences = ApplicationPreferences(),
 )
+
+private fun ThemeConfig.toAppThemeMode(): AppThemeMode = when (this) {
+    ThemeConfig.SYSTEM -> AppThemeMode.FOLLOW_SYSTEM
+    ThemeConfig.OFF -> AppThemeMode.LIGHT
+    ThemeConfig.ON -> AppThemeMode.DARK
+}
 
 sealed interface AppearancePreferencesEvent {
     data class ShowDialog(val value: AppearancePreferenceDialog?) : AppearancePreferencesEvent

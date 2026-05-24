@@ -5,6 +5,8 @@ import android.os.Bundle
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.runBlocking
 import one.only.player.core.common.AppLanguageManager
+import one.only.player.core.common.AppThemeMode
+import one.only.player.core.common.AppThemeModeManager
 import one.only.player.core.model.ApplicationPreferences
 import one.only.player.core.model.ControlButtonsPosition
 import one.only.player.core.model.DecoderPriority
@@ -55,6 +57,7 @@ internal fun Context.runSettingsCommand(
 }
 
 internal suspend fun DebugCommandEntryPoint.setSetting(
+    context: Context,
     target: String?,
     extras: Bundle?,
 ) {
@@ -63,6 +66,10 @@ internal suspend fun DebugCommandEntryPoint.setSetting(
         "appearance.theme" -> {
             val themeConfig = enumValue<ThemeConfig>(value.requiredString(EXTRA_VALUE))
             preferencesRepository().updateApplicationPreferences { it.copy(themeConfig = themeConfig) }
+            AppThemeModeManager.applyToCurrent(
+                context = context,
+                mode = themeConfig.toAppThemeMode(),
+            )
         }
         "appearance.language" -> {
             val languageTag = value.getString(EXTRA_VALUE).orEmpty()
@@ -338,13 +345,20 @@ internal suspend fun DebugCommandEntryPoint.toggleSetting(target: String?) {
     }
 }
 
-internal suspend fun DebugCommandEntryPoint.runSettingAction(target: String?) {
+internal suspend fun DebugCommandEntryPoint.runSettingAction(
+    context: Context,
+    target: String?,
+) {
     when (target) {
         "general.clear_thumbnail_cache" -> mediaInfoSynchronizer().clearThumbnailsCache()
         "general.clear_video_cache" -> mediaInfoSynchronizer().clearVideoCache()
         "general.reset_settings" -> {
             preferencesRepository().resetPreferences()
             AppLanguageManager.applyToCurrent("")
+            AppThemeModeManager.applyToCurrent(
+                context = context,
+                mode = AppThemeMode.FOLLOW_SYSTEM,
+            )
         }
         "subtitle.clear_external_font" -> subtitleFontRepository().clearFont()
         "media.layout_scale_reset" -> preferencesRepository().updateApplicationPreferences {
@@ -352,6 +366,12 @@ internal suspend fun DebugCommandEntryPoint.runSettingAction(target: String?) {
         }
         else -> error("Unknown action target: $target")
     }
+}
+
+private fun ThemeConfig.toAppThemeMode(): AppThemeMode = when (this) {
+    ThemeConfig.SYSTEM -> AppThemeMode.FOLLOW_SYSTEM
+    ThemeConfig.OFF -> AppThemeMode.LIGHT
+    ThemeConfig.ON -> AppThemeMode.DARK
 }
 
 private suspend fun DebugCommandEntryPoint.updateApplicationBoolean(
