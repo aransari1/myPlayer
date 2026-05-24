@@ -227,6 +227,7 @@ internal suspend fun DebugCommandEntryPoint.setSetting(
         "audio.pause_on_headset_disconnect" -> updatePlayerBoolean(value) { preferences, isEnabled -> preferences.copy(shouldPauseOnHeadsetDisconnect = isEnabled) }
         "audio.system_volume_panel" -> updatePlayerBoolean(value) { preferences, isEnabled -> preferences.copy(shouldShowSystemVolumePanel = isEnabled) }
         "audio.remember_volume" -> updatePlayerBoolean(value) { preferences, isEnabled -> preferences.copy(shouldRememberPlayerVolume = isEnabled) }
+        "audio.remember_track" -> updatePlayerBoolean(value) { preferences, isEnabled -> preferences.copy(shouldRememberAudioTrack = isEnabled) }
         "audio.initial_volume_limit" -> updatePlayerInt(value) { preferences, intValue ->
             preferences.copy(
                 maxInitialPlayerVolumePercentage = intValue.coerceIn(
@@ -238,6 +239,7 @@ internal suspend fun DebugCommandEntryPoint.setSetting(
         "audio.normalization" -> updatePlayerBoolean(value) { preferences, isEnabled -> preferences.copy(isVolumeNormalizationEnabled = isEnabled) }
         "audio.boost" -> updatePlayerBoolean(value) { preferences, isEnabled -> preferences.copy(isVolumeBoostEnabled = isEnabled) }
         "subtitle.auto_load" -> updatePlayerBoolean(value) { preferences, isEnabled -> preferences.copy(isSubtitleAutoLoadEnabled = isEnabled) }
+        "subtitle.remember_track" -> updatePlayerBoolean(value) { preferences, isEnabled -> preferences.copy(shouldRememberSubtitleTrack = isEnabled) }
         "subtitle.language" -> updatePlayerString(value) { preferences, stringValue -> preferences.copy(preferredSubtitleLanguage = stringValue) }
         "subtitle.font" -> {
             val font = enumValue<Font>(value.requiredString(EXTRA_VALUE))
@@ -320,9 +322,11 @@ internal suspend fun DebugCommandEntryPoint.toggleSetting(target: String?) {
         "audio.pause_on_headset_disconnect" -> togglePlayer { it.copy(shouldPauseOnHeadsetDisconnect = !it.shouldPauseOnHeadsetDisconnect) }
         "audio.system_volume_panel" -> togglePlayer { it.copy(shouldShowSystemVolumePanel = !it.shouldShowSystemVolumePanel) }
         "audio.remember_volume" -> togglePlayer { it.copy(shouldRememberPlayerVolume = !it.shouldRememberPlayerVolume) }
+        "audio.remember_track" -> togglePlayer { it.copy(shouldRememberAudioTrack = !it.shouldRememberAudioTrack) }
         "audio.normalization" -> togglePlayer { it.copy(isVolumeNormalizationEnabled = !it.isVolumeNormalizationEnabled) }
         "audio.boost" -> togglePlayer { it.copy(isVolumeBoostEnabled = !it.isVolumeBoostEnabled) }
         "subtitle.auto_load" -> togglePlayer { it.copy(isSubtitleAutoLoadEnabled = !it.isSubtitleAutoLoadEnabled) }
+        "subtitle.remember_track" -> togglePlayer { it.copy(shouldRememberSubtitleTrack = !it.shouldRememberSubtitleTrack) }
         "subtitle.bold" -> togglePlayer { it.copy(shouldUseBoldSubtitleText = !it.shouldUseBoldSubtitleText) }
         "subtitle.background" -> togglePlayer { it.copy(shouldShowSubtitleBackground = !it.shouldShowSubtitleBackground) }
         "subtitle.embedded_styles" -> togglePlayer { it.copy(shouldApplyEmbeddedStyles = !it.shouldApplyEmbeddedStyles) }

@@ -100,6 +100,13 @@ private fun AudioPreferencesContent(
                     icon = NextIcons.Language,
                     onClick = { onEvent(AudioPreferencesUiEvent.ShowDialog(AudioPreferenceDialog.AudioLanguageDialog)) },
                     isFirstItem = true,
+                )
+                PreferenceSwitch(
+                    modifier = Modifier.testTag("switch_settings_audio_remember_track"),
+                    title = stringResource(id = R.string.remember_audio_track),
+                    icon = NextIcons.Audio,
+                    isChecked = uiState.preferences.shouldRememberAudioTrack,
+                    onClick = { onEvent(AudioPreferencesUiEvent.ToggleRememberAudioTrack) },
                     isLastItem = true,
                 )
             }

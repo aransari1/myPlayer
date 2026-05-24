@@ -43,6 +43,7 @@ class AudioPreferencesViewModel @Inject constructor(
             AudioPreferencesUiEvent.ToggleShowSystemVolumePanel -> toggleShowSystemVolumePanel()
             AudioPreferencesUiEvent.ToggleRequireAudioFocus -> toggleRequireAudioFocus()
             AudioPreferencesUiEvent.ToggleRememberPlayerVolume -> toggleRememberPlayerVolume()
+            AudioPreferencesUiEvent.ToggleRememberAudioTrack -> toggleRememberAudioTrack()
             AudioPreferencesUiEvent.ToggleVolumeNormalization -> toggleVolumeNormalization()
             AudioPreferencesUiEvent.ToggleVolumeBoost -> toggleVolumeBoost()
         }
@@ -90,6 +91,14 @@ class AudioPreferencesViewModel @Inject constructor(
         viewModelScope.launch {
             preferencesRepository.updatePlayerPreferences {
                 it.copy(shouldRememberPlayerVolume = !it.shouldRememberPlayerVolume)
+            }
+        }
+    }
+
+    private fun toggleRememberAudioTrack() {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences {
+                it.copy(shouldRememberAudioTrack = !it.shouldRememberAudioTrack)
             }
         }
     }
@@ -142,6 +151,7 @@ sealed interface AudioPreferencesUiEvent {
     data object ToggleShowSystemVolumePanel : AudioPreferencesUiEvent
     data object ToggleRequireAudioFocus : AudioPreferencesUiEvent
     data object ToggleRememberPlayerVolume : AudioPreferencesUiEvent
+    data object ToggleRememberAudioTrack : AudioPreferencesUiEvent
     data object ToggleVolumeNormalization : AudioPreferencesUiEvent
     data object ToggleVolumeBoost : AudioPreferencesUiEvent
 }

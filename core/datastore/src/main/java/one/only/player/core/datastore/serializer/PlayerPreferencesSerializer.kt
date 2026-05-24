@@ -101,6 +101,12 @@ object PlayerPreferencesSerializer : Serializer<PlayerPreferences> {
         if ("playerIconStyle" !in root && root["shouldUseClassicPlayerIcons"]?.jsonPrimitive?.content == "true") {
             upgradedPreferences = upgradedPreferences.copy(playerIconStyle = PlayerIconStyle.CLASSIC)
         }
+        root["shouldRememberSelections"]?.jsonPrimitive?.content?.toBooleanStrictOrNull()?.let { shouldRememberSelections ->
+            upgradedPreferences = upgradedPreferences.copy(
+                shouldRememberAudioTrack = upgradedPreferences.shouldRememberAudioTrack.takeIf { "shouldRememberAudioTrack" in root } ?: shouldRememberSelections,
+                shouldRememberSubtitleTrack = upgradedPreferences.shouldRememberSubtitleTrack.takeIf { "shouldRememberSubtitleTrack" in root } ?: shouldRememberSelections,
+            )
+        }
         if (!root.keys.containsAll(videoFilterEnabledKeys)) {
             upgradedPreferences = upgradedPreferences.copy(
                 isVideoBrightnessFilterEnabled = upgradedPreferences.isVideoBrightnessFilterEnabled.takeIf {

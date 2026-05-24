@@ -146,6 +146,13 @@ private fun SubtitlePreferencesContent(
                     isEnabled = uiState.preferences.isSubtitleAutoLoadEnabled,
                     onClick = { onEvent(SubtitlePreferencesUiEvent.ShowDialog(SubtitlePreferenceDialog.SubtitleLanguageDialog)) },
                 )
+                PreferenceSwitch(
+                    modifier = Modifier.testTag("switch_settings_subtitle_remember_track"),
+                    title = stringResource(id = R.string.remember_subtitle_track),
+                    icon = NextIcons.Subtitle,
+                    isChecked = uiState.preferences.shouldRememberSubtitleTrack,
+                    onClick = { onEvent(SubtitlePreferencesUiEvent.ToggleRememberSubtitleTrack) },
+                )
                 ClickablePreferenceItem(
                     modifier = Modifier.testTag("item_settings_subtitle_encoding"),
                     title = stringResource(R.string.subtitle_text_encoding),

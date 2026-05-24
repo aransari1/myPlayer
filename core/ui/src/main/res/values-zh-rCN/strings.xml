@@ -28,6 +28,8 @@
     <string name="remember_brightness_level">记住亮度</string>
     <string name="remember_brightness_level_description">记住播放时设置的亮度</string>
     <string name="remember_selections_description">记住每个文件的音轨、字幕等选择</string>
+    <string name="remember_audio_track">记住音轨</string>
+    <string name="remember_subtitle_track">记住字幕</string>
     <string name="resume_description">选择是否从您上次停止的地方继续播放视频</string>
     <string name="seek_gesture">跳转手势</string>
     <string name="seek_gesture_description">横向滑动可向前或向后跳转</string>
