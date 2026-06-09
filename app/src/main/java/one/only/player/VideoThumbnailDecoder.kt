@@ -3,8 +3,8 @@ package one.only.player
 import android.content.ContentUris
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.MediaMetadataRetriever
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.util.Size
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.get
@@ -21,6 +21,7 @@ import coil3.request.Options
 import coil3.toAndroidUri
 import io.github.anilbeesetti.nextlib.mediainfo.MediaInfo
 import io.github.anilbeesetti.nextlib.mediainfo.MediaInfoBuilder
+import io.github.anilbeesetti.nextlib.mediainfo.MediaThumbnailRetriever
 import kotlin.math.abs
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -32,18 +33,22 @@ class VideoThumbnailDecoder(
     private val options: Options,
     private val strategy: ThumbnailStrategy,
     private val diskCache: Lazy<DiskCache?>,
+    private val mimeType: String?,
 ) : Decoder {
 
     companion object {
         // 缩略图最大尺寸，避免 4K 全分辨率 Bitmap 占用过多内存
         private const val MAX_THUMBNAIL_SIZE = 512
-        private const val THUMBNAIL_CACHE_VERSION = 3
+        private const val THUMBNAIL_CACHE_VERSION = 4
+        private const val LARGE_CONTAINER_ARTWORK_LIMIT_BYTES = 256L * 1024L * 1024L
         private val mediaInfoSemaphore = Semaphore(1)
     }
 
     // 内嵌封面表达作者意图，优先级高于抽帧。
-    private fun tryLoadEmbeddedArtwork(): Bitmap? {
-        val retriever = MediaMetadataRetriever()
+    private fun tryLoadEmbeddedArtwork(shouldSkipArtwork: Boolean): Bitmap? {
+        if (shouldSkipArtwork) return null
+
+        val retriever = MediaThumbnailRetriever()
         return try {
             val metadata = source.metadata
             val mediaInfoSource = when {
@@ -60,7 +65,7 @@ class VideoThumbnailDecoder(
                 else -> return null
             }
 
-            val artworkData = retriever.embeddedPicture ?: return null
+            val artworkData = retriever.getEmbeddedPicture() ?: return null
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeByteArray(artworkData, 0, artworkData.size, bounds)
             BitmapFactory.decodeByteArray(
@@ -78,6 +83,49 @@ class VideoThumbnailDecoder(
             null
         } finally {
             runCatching { retriever.release() }
+        }
+    }
+
+    // 大型 Matroska 取 embeddedPicture 可能长时间阻塞，优先保证抽帧可完成。
+    private fun shouldSkipEmbeddedArtwork(): Boolean {
+        if (!mimeType.isLargeContainerMimeType()) return false
+
+        val sourceSize = getSourceSize() ?: return false
+        val shouldSkip = sourceSize > LARGE_CONTAINER_ARTWORK_LIMIT_BYTES
+        if (shouldSkip) {
+            logThumbnail { "embeddedArtwork skip mimeType=$mimeType size=$sourceSize key=$diskCacheKey" }
+        }
+        return shouldSkip
+    }
+
+    private fun getSourceSize(): Long? {
+        val metadata = source.metadata
+        return when {
+            metadata is ContentMetadata -> getContentUriSize(metadata)
+            source.fileSystem === FileSystem.SYSTEM -> source.file().toFile().length().takeIf { it > 0L }
+            else -> null
+        }
+    }
+
+    private fun getContentUriSize(metadata: ContentMetadata): Long? {
+        val uri = metadata.uri.toAndroidUri()
+        return try {
+            options.context.contentResolver.query(
+                uri,
+                arrayOf(OpenableColumns.SIZE),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use null
+
+                cursor.getColumnIndex(OpenableColumns.SIZE)
+                    .takeIf { it >= 0 }
+                    ?.let(cursor::getLong)
+                    ?.takeIf { it > 0L }
+            }
+        } catch (_: Exception) {
+            null
         }
     }
 
@@ -168,13 +216,18 @@ class VideoThumbnailDecoder(
         }
         logThumbnail { "diskCache miss strategy=${strategy.logName} key=$key" }
 
-        tryLoadEmbeddedArtwork()?.scaleToFit()?.let { artworkBitmap ->
+        val shouldSkipArtwork = shouldSkipEmbeddedArtwork()
+        tryLoadEmbeddedArtwork(shouldSkipArtwork)?.scaleToFit()?.let { artworkBitmap ->
             logThumbnail { "embeddedArtwork ok strategy=${strategy.logName} key=$key" }
             val bitmap = writeToDiskCache(artworkBitmap)
             return DecodeResult(
                 image = bitmap.toDrawable(options.context.resources).asImage(),
                 isSampled = true,
             )
+        }
+
+        if (shouldSkipArtwork) {
+            tryDecodeMediaInfoThumbnail()?.let { return it }
         }
 
         tryLoadSystemThumbnail()?.let { systemBitmap ->
@@ -186,6 +239,19 @@ class VideoThumbnailDecoder(
             )
         }
 
+        if (shouldSkipArtwork) {
+            logThumbnail { "decode fail strategy=${strategy.logName} key=$key" }
+            throw IllegalStateException("Failed to get video thumbnail for key=$key")
+        }
+
+        tryDecodeMediaInfoThumbnail()?.let { return it }
+
+        logThumbnail { "decode fail strategy=${strategy.logName} key=$key" }
+        throw IllegalStateException("Failed to get video thumbnail for key=$key")
+    }
+
+    private suspend fun tryDecodeMediaInfoThumbnail(): DecodeResult? {
+        val key = diskCacheKey
         val mediaInfoStart = System.currentTimeMillis()
         mediaInfoSemaphore.withPermit {
             getThumbnailFromMediaInfo()
@@ -197,9 +263,7 @@ class VideoThumbnailDecoder(
                 isSampled = true,
             )
         }
-
-        logThumbnail { "decode fail strategy=${strategy.logName} key=$key" }
-        throw IllegalStateException("Failed to get video thumbnail for key=$key")
+        return null
     }
 
     private fun getThumbnailFromMediaInfo(): Bitmap? {
@@ -339,6 +403,7 @@ class VideoThumbnailDecoder(
                 options = options,
                 strategy = strategy,
                 diskCache = lazy { imageLoader.diskCache },
+                mimeType = result.mimeType,
             )
         }
 
@@ -367,6 +432,12 @@ private val ThumbnailStrategy.cacheKey: String
     }
 
 private fun MediaInfo.getFrameAtMillis(timeMs: Long): Bitmap? = getFrameAt(timeMs.coerceAtLeast(0L) * 1_000L)
+
+private fun String?.isLargeContainerMimeType(): Boolean = when (this?.lowercase()) {
+    "video/x-matroska" -> true
+    "video/webm" -> true
+    else -> false
+}
 
 private inline fun logThumbnail(message: () -> String) {
     if (BuildConfig.DEBUG) {

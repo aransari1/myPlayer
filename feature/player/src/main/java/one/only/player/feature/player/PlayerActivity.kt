@@ -60,6 +60,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import one.only.player.core.common.Logger
@@ -885,19 +886,19 @@ class PlayerActivity : AppCompatActivity() {
         }
         if (prefs.playerScreenOrientation != ScreenOrientation.VIDEO_ORIENTATION) return
         val uri = intent.data ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val video = viewModel.getVideoByUri(uri.toString()) ?: return@launch
-            if (video.width <= 0 || video.height <= 0) return@launch
-            val orientation = if (video.height >= video.width) {
+        val orientation = runBlocking(Dispatchers.IO) {
+            val video = viewModel.getVideoByUri(uri.toString()) ?: return@runBlocking null
+            if (video.width <= 0 || video.height <= 0) return@runBlocking null
+
+            if (video.height >= video.width) {
                 ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
             } else {
                 ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             }
-            withContext(Dispatchers.Main) {
-                if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
-                    requestedOrientation = orientation
-                }
-            }
+        } ?: return
+
+        if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+            requestedOrientation = orientation
         }
     }
 }
