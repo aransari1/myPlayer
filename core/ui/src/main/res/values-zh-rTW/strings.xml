@@ -46,8 +46,8 @@
     <string name="controller_timeout_select">控制列自動隱藏</string>
     <string name="custom_controller_timeout">自訂逾時</string>
     <string name="enter_seconds">輸入秒數</string>
-    <string name="dim_video_when_controls_visible">控制列顯示時壓暗影片</string>
-    <string name="dim_video_when_controls_visible_description">在播放器控制列後顯示暗色遮罩</string>
+    <string name="dim_video_when_controls_visible">顯示控制列時讓畫面變暗</string>
+    <string name="dim_video_when_controls_visible_description">控制列顯示期間，讓畫面稍微變暗，方便看清按鈕</string>
     <string name="no_videos_found">沒有找到影片</string>
     <string name="no">否</string>
     <string name="date">日期</string>

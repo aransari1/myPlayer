@@ -207,8 +207,8 @@
     <string name="controller_timeout_select">控制栏自动隐藏</string>
     <string name="custom_controller_timeout">自定义超时</string>
     <string name="enter_seconds">输入秒数</string>
-    <string name="dim_video_when_controls_visible">控制栏显示时压暗视频</string>
-    <string name="dim_video_when_controls_visible_description">在播放器控制栏后显示暗色遮罩</string>
+    <string name="dim_video_when_controls_visible">显示控制栏时让画面变暗</string>
+    <string name="dim_video_when_controls_visible_description">控制栏显示期间，让画面稍微变暗，方便看清按钮</string>
     <string name="seek_increment">跳转增量</string>
     <string name="seconds">%1$s 秒</string>
     <string name="subtitle_text_encoding">字幕文本编码</string>
