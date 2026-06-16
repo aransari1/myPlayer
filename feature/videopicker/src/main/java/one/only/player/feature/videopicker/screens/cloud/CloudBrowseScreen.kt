@@ -173,7 +173,7 @@ internal fun CloudBrowseScreen(
     var shouldShowQuickSettingsDialog by rememberSaveable { mutableStateOf(false) }
     var restoredDirectoryPath by rememberSaveable { mutableStateOf<String?>(null) }
     val selectedItemsSize = selectedFilePaths.size
-    val totalItemsSize = uiState.files.count { !it.isDirectory }
+    val totalItemsSize = uiState.files.size
     val isInSelectionMode = selectedFilePaths.isNotEmpty()
 
     fun clearSelection() {
@@ -182,7 +182,6 @@ internal fun CloudBrowseScreen(
     }
 
     fun toggleFileSelection(file: RemoteFile) {
-        if (file.isDirectory) return
         selectedFilePaths = if (file.path in selectedFilePaths) {
             selectedFilePaths - file.path
         } else {
@@ -200,7 +199,7 @@ internal fun CloudBrowseScreen(
 
     LaunchedEffect(uiState.files) {
         selectedFilePaths = selectedFilePaths
-            .filter { path -> uiState.files.any { file -> !file.isDirectory && file.path == path } }
+            .filter { path -> uiState.files.any { file -> file.path == path } }
             .toSet()
     }
 
@@ -268,7 +267,6 @@ internal fun CloudBrowseScreen(
                             onClick = {
                                 selectedFilePaths = if (selectedItemsSize != totalItemsSize) {
                                     uiState.files
-                                        .filter { !it.isDirectory }
                                         .map { it.path }
                                         .toSet()
                                 } else {
@@ -303,13 +301,21 @@ internal fun CloudBrowseScreen(
                                     contentDescription = stringResource(id = R.string.menu),
                                 )
                             }
+                            val selectedFiles = uiState.files.filter { it.path in selectedFilePaths }
+                            val selectedFile = selectedFiles.singleOrNull()
                             CloudSelectionActionsMenu(
                                 expanded = shouldShowSelectionMenu,
                                 onDismissRequest = { shouldShowSelectionMenu = false },
+                                shouldShowInfoAction = selectedFile?.isDirectory == false,
+                                onFavoriteAction = {
+                                    shouldShowSelectionMenu = false
+                                    if (selectedFiles.isEmpty()) return@CloudSelectionActionsMenu
+                                    onEvent(CloudBrowseEvent.AddFavorites(selectedFiles))
+                                    clearSelection()
+                                },
                                 onInfoAction = {
                                     shouldShowSelectionMenu = false
-                                    val selectedPath = selectedFilePaths.firstOrNull() ?: return@CloudSelectionActionsMenu
-                                    val file = uiState.files.firstOrNull { it.path == selectedPath } ?: return@CloudSelectionActionsMenu
+                                    val file = selectedFile?.takeUnless { it.isDirectory } ?: return@CloudSelectionActionsMenu
                                     onFileInfoClick(file)
                                     clearSelection()
                                 },
@@ -503,14 +509,17 @@ private fun CloudRemoteMediaView(
                     shouldMarkLastPlayedMedia = shouldMarkLastPlayedMedia,
                     isRecentlyPlayed = false,
                     hasBeenPlayed = false,
-                    isSelected = false,
+                    isSelected = file.path in selectedFilePaths,
                     isFirstItem = index == 0,
                     isLastItem = index == folders.lastIndex,
                     onClick = {
-                        if (!isInSelectionMode) {
+                        if (isInSelectionMode) {
+                            onToggleFileSelection(file)
+                        } else {
                             onDirectoryClick(file.path)
                         }
                     },
+                    onLongClick = { onLongClickFile(file) },
                 )
             }
 
@@ -899,6 +908,8 @@ private fun selectedRemoteMediaContainerColor(): Color = if (MaterialTheme.color
 private fun CloudSelectionActionsMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
+    shouldShowInfoAction: Boolean,
+    onFavoriteAction: () -> Unit,
     onInfoAction: () -> Unit,
 ) {
     DropdownMenu(
@@ -915,11 +926,19 @@ private fun CloudSelectionActionsMenu(
         ),
     ) {
         CloudSelectionMenuItem(
-            text = stringResource(id = R.string.info),
-            icon = NextIcons.Info,
-            testTag = "item_cloud_selection_info",
-            onClick = onInfoAction,
+            text = stringResource(id = R.string.add_to_favorites),
+            icon = NextIcons.LibraryBooks,
+            testTag = "item_cloud_selection_add_favorites",
+            onClick = onFavoriteAction,
         )
+        if (shouldShowInfoAction) {
+            CloudSelectionMenuItem(
+                text = stringResource(id = R.string.info),
+                icon = NextIcons.Info,
+                testTag = "item_cloud_selection_info",
+                onClick = onInfoAction,
+            )
+        }
     }
 }
 

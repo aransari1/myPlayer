@@ -19,11 +19,13 @@ import one.only.player.core.common.NextDispatchers
 import one.only.player.core.common.Utils
 import one.only.player.core.data.models.RemotePlaybackInfo
 import one.only.player.core.data.remote.RemoteMediaResolver
+import one.only.player.core.data.repository.FavoriteRepository
 import one.only.player.core.data.repository.MediaRepository
 import one.only.player.core.data.repository.PreferencesRepository
 import one.only.player.core.data.repository.RemoteServerRepository
 import one.only.player.core.data.repository.buildRemoteFolderPlaybackAnchorKey
 import one.only.player.core.data.repository.buildRemotePlaybackStateKey
+import one.only.player.core.data.repository.toRemoteFavoriteItem
 import one.only.player.core.media.info.RemoteMediaInfo
 import one.only.player.core.media.info.RemoteMediaInfoReader
 import one.only.player.core.model.ApplicationPreferences
@@ -38,6 +40,7 @@ class CloudBrowseViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: RemoteServerRepository,
     private val mediaRepository: MediaRepository,
+    private val favoriteRepository: FavoriteRepository,
     private val preferencesRepository: PreferencesRepository,
     private val remoteMediaResolver: RemoteMediaResolver,
     private val remoteMediaInfoReader: RemoteMediaInfoReader,
@@ -75,6 +78,7 @@ class CloudBrowseViewModel @Inject constructor(
             CloudBrowseEvent.DismissFileInfo -> dismissFileInfo()
             CloudBrowseEvent.Retry -> loadCurrentDirectory(forceRefresh = true)
             CloudBrowseEvent.RefreshPlaybackStates -> loadPlaybackStates()
+            is CloudBrowseEvent.AddFavorites -> addFavorites(event.files)
             is CloudBrowseEvent.UpdateQuickSettings -> updateQuickSettings(event.preferences)
         }
     }
@@ -299,6 +303,13 @@ class CloudBrowseViewModel @Inject constructor(
         }
     }
 
+    private fun addFavorites(files: List<RemoteFile>) {
+        val server = _uiState.value.server ?: return
+        viewModelScope.launch {
+            files.forEach { file -> favoriteRepository.upsert(file.toRemoteFavoriteItem(server)) }
+        }
+    }
+
     private fun buildProbeUrl(
         server: RemoteServer,
         file: RemoteFile,
@@ -392,5 +403,6 @@ sealed interface CloudBrowseEvent {
     data object DismissFileInfo : CloudBrowseEvent
     data object Retry : CloudBrowseEvent
     data object RefreshPlaybackStates : CloudBrowseEvent
+    data class AddFavorites(val files: List<RemoteFile>) : CloudBrowseEvent
     data class UpdateQuickSettings(val preferences: ApplicationPreferences) : CloudBrowseEvent
 }
