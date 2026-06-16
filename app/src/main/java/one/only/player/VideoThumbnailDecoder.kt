@@ -50,10 +50,15 @@ class VideoThumbnailDecoder(
     companion object {
         // 缩略图最大尺寸，避免 4K 全分辨率 Bitmap 占用过多内存
         private const val MAX_THUMBNAIL_SIZE = 512
-        private const val THUMBNAIL_CACHE_VERSION = 5
+        private const val THUMBNAIL_CACHE_VERSION = 7
         private const val LARGE_CONTAINER_ARTWORK_LIMIT_BYTES = 256L * 1024L * 1024L
         private const val MIN_MPEG_TS_THUMBNAIL_SCORE = 80f
         private const val GOOD_MPEG_TS_THUMBNAIL_SCORE = 120f
+        private val CLOUD_DOCUMENT_VISIBLE_FRAME_PERCENTAGES = listOf(
+            0.20f,
+            0.30f,
+            0.50f,
+        )
         private val VIDEO_CONTAINER_MIME_TYPES = setOf(
             "application/matroska",
             "application/x-matroska",
@@ -147,6 +152,12 @@ class VideoThumbnailDecoder(
         }
     }
 
+    private fun isCloudDocumentSource(): Boolean {
+        val metadata = source.metadata as? ContentMetadata ?: return false
+        val uri = metadata.uri.toAndroidUri()
+        return uri.authority == "${options.context.packageName}.documents"
+    }
+
     // 优先使用系统缩略图服务，质量优于 FFmpeg 提取帧
     private fun tryLoadSystemThumbnail(): Bitmap? {
         val uri = when (val metadata = source.metadata) {
@@ -206,7 +217,14 @@ class VideoThumbnailDecoder(
         }
 
     private val diskCacheKey: String
-        get() = "$sourceCacheKey#thumbnail=v$THUMBNAIL_CACHE_VERSION:${strategy.cacheKey}"
+        get() = "$sourceCacheKey#thumbnail=v$THUMBNAIL_CACHE_VERSION:${strategy.cacheKey}${cloudDocumentCacheKeySuffix()}"
+
+    private fun cloudDocumentCacheKeySuffix(): String {
+        if (!isCloudDocumentSource()) return ""
+        return ":cloudLocalFrames=1"
+    }
+
+    private fun primaryCandidateTimeMs(duration: Long): Long = strategy.primaryTimeMs(duration)
 
     @OptIn(ExperimentalCoilApi::class)
     override suspend fun decode(): DecodeResult {
@@ -257,26 +275,26 @@ class VideoThumbnailDecoder(
                 shouldRejectNearBlack = mpegTsProgramMapPidFix != null,
                 mpegTsProgramMapPidFix = mpegTsProgramMapPidFix,
             )?.let { return it }
-        }
-
-        tryLoadSystemThumbnail()?.takeUnless { systemBitmap ->
-            val isNearBlackThumbnail = isNearBlackFrame(systemBitmap)
-            if (mpegTsProgramMapPidFix == null && isNearBlackThumbnail && mimeType.shouldSniffMpegTsAfterBlackThumbnail()) {
-                mpegTsProgramMapPidFix = detectMpegTsProgramMapPidFix()
+        } else {
+            tryLoadSystemThumbnail()?.takeUnless { systemBitmap ->
+                val isNearBlackThumbnail = isNearBlackFrame(systemBitmap)
+                if (isNearBlackThumbnail && mimeType.shouldSniffMpegTsAfterBlackThumbnail()) {
+                    mpegTsProgramMapPidFix = detectMpegTsProgramMapPidFix()
+                }
+                val isBlackMpegTsThumbnail = mpegTsProgramMapPidFix != null && isNearBlackThumbnail
+                if (isBlackMpegTsThumbnail) {
+                    logThumbnail { "systemThumbnail skip nearBlack patchedTs key=$key" }
+                    systemBitmap.recycle()
+                }
+                isBlackMpegTsThumbnail
+            }?.let { systemBitmap ->
+                logThumbnail { "systemThumbnail ok strategy=${strategy.logName} key=$key" }
+                val bitmap = writeToDiskCache(systemBitmap)
+                return DecodeResult(
+                    image = bitmap.toDrawable(options.context.resources).asImage(),
+                    isSampled = true,
+                )
             }
-            val isBlackMpegTsThumbnail = mpegTsProgramMapPidFix != null && isNearBlackThumbnail
-            if (isBlackMpegTsThumbnail) {
-                logThumbnail { "systemThumbnail skip nearBlack patchedTs key=$key" }
-                systemBitmap.recycle()
-            }
-            isBlackMpegTsThumbnail
-        }?.let { systemBitmap ->
-            logThumbnail { "systemThumbnail ok strategy=${strategy.logName} key=$key" }
-            val bitmap = writeToDiskCache(systemBitmap)
-            return DecodeResult(
-                image = bitmap.toDrawable(options.context.resources).asImage(),
-                isSampled = true,
-            )
         }
 
         if (mpegTsProgramMapPidFix != null && !hasTriedPatchedMpegTsThumbnail) {
@@ -607,24 +625,35 @@ class VideoThumbnailDecoder(
     }
 
     private fun mpegTsCandidateTimesMs(duration: Long): List<Long> {
-        val preferredTimeMs = strategy.primaryTimeMs(duration)
+        val preferredTimeMs = primaryCandidateTimeMs(duration)
             .takeIf { duration <= 0L || it in 0..duration }
-        return listOfNotNull(
-            preferredTimeMs,
-            20_000L,
-            30_000L,
-            45_000L,
-            60_000L,
-            120_000L,
-            300_000L,
-            600_000L,
-            1_000L,
-            3_000L,
-            5_000L,
-            10_000L,
-            0L,
-        ).filter { duration <= 0L || it <= duration }
+        return cloudDocumentVisibleFrameTimesMs(duration)
+            .plus(listOfNotNull(preferredTimeMs))
+            .plus(
+                listOf(
+                    20_000L,
+                    30_000L,
+                    45_000L,
+                    60_000L,
+                    120_000L,
+                    300_000L,
+                    600_000L,
+                    1_000L,
+                    3_000L,
+                    5_000L,
+                    10_000L,
+                    0L,
+                ),
+            ).filter { duration <= 0L || it <= duration }
             .distinct()
+    }
+
+    private fun cloudDocumentVisibleFrameTimesMs(duration: Long): List<Long> {
+        if (!isCloudDocumentSource()) return emptyList()
+        if (duration <= 0L) return emptyList()
+        return CLOUD_DOCUMENT_VISIBLE_FRAME_PERCENTAGES.mapNotNull { percentage ->
+            (duration * percentage).toLong().takeIf { it in 0..duration }
+        }
     }
 
     private fun mpegTsCandidateFrameIndexes(): List<Int> = listOf(

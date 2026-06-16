@@ -3,9 +3,15 @@ package one.only.player.provider
 import android.database.MatrixCursor
 import android.net.Uri
 import android.os.CancellationSignal
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.ParcelFileDescriptor
+import android.os.ProxyFileDescriptorCallback
+import android.os.storage.StorageManager
 import android.provider.DocumentsContract
 import android.provider.DocumentsProvider
+import android.system.ErrnoException
+import android.system.OsConstants
 import android.webkit.MimeTypeMap
 import com.hierynomus.msdtyp.AccessMask
 import com.hierynomus.msfscc.FileAttributes
@@ -18,7 +24,10 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import java.io.FileNotFoundException
+import java.io.IOException
+import java.io.InputStream
 import java.util.EnumSet
+import java.util.LinkedHashMap
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
@@ -327,40 +336,17 @@ class CloudDocumentsProvider : DocumentsProvider() {
             .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
-        val requestBuilder = Request.Builder().url(targetUrl)
-        webDavClient.buildAuthHeaders(server).forEach { (key, value) ->
-            requestBuilder.header(key, value)
+        val authHeaders = webDavClient.buildAuthHeaders(server)
+        val fileSize = findRemoteFile(server, path)?.size ?: throw FileNotFoundException("File size not found")
+        return openProxyDocument(signal) { onReleased ->
+            WebDavProxyFileCallback(
+                url = targetUrl,
+                authHeaders = authHeaders,
+                fileSize = fileSize,
+                httpClient = httpClient,
+                onReleased = onReleased,
+            )
         }
-        val response = httpClient.newCall(requestBuilder.build()).execute()
-        val body = response.body
-        if (!response.isSuccessful) {
-            body.close()
-            response.close()
-            throw FileNotFoundException("HTTP ${response.code}")
-        }
-
-        val pipe = ParcelFileDescriptor.createReliablePipe()
-        signal?.setOnCancelListener {
-            runCatching { pipe[0].close() }
-            runCatching { pipe[1].close() }
-            runCatching { body.close() }
-            response.close()
-        }
-
-        Thread {
-            try {
-                ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { output ->
-                    body.byteStream().use { input ->
-                        input.copyTo(output)
-                    }
-                }
-            } catch (exception: Exception) {
-                Logger.error(TAG, "Failed to stream WebDAV document", exception)
-            } finally {
-                response.close()
-            }
-        }.start()
-        return pipe[0]
     }
 
     private fun openFtpDocument(
@@ -368,65 +354,44 @@ class CloudDocumentsProvider : DocumentsProvider() {
         path: String,
         signal: CancellationSignal?,
     ): ParcelFileDescriptor {
-        val client = org.apache.commons.net.ftp.FTPClient().apply {
-            connectTimeout = FtpClient.CONNECT_TIMEOUT_MS
-            dataTimeout = java.time.Duration.ofMillis(FtpClient.DATA_TIMEOUT_MS.toLong())
-            setControlEncoding(Charsets.UTF_8.name())
-            setAutodetectUTF8(true)
-        }
-        try {
-            client.connect(server.host, server.port ?: FtpClient.DEFAULT_PORT)
-            val loginOk = if (server.username.isBlank()) {
-                client.login("anonymous", "")
-            } else {
-                client.login(server.username, server.password)
-            }
-            if (!loginOk) {
-                throw FileNotFoundException("FTP login failed")
-            }
-
-            client.enterLocalPassiveMode()
-            client.setFileType(org.apache.commons.net.ftp.FTPClient.BINARY_FILE_TYPE)
-            val input = client.retrieveFileStream(path) ?: throw FileNotFoundException("FTP file not found")
-            val pipe = try {
-                ParcelFileDescriptor.createReliablePipe()
-            } catch (exception: Exception) {
-                runCatching { input.close() }
-                throw exception
-            }
-
-            signal?.setOnCancelListener {
-                runCatching { pipe[0].close() }
-                runCatching { pipe[1].close() }
-                runCatching { input.close() }
-                runCatching { client.completePendingCommand() }
-                disconnectFtpClient(client)
-            }
-
-            Thread {
-                try {
-                    ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { output ->
-                        input.use { source ->
-                            source.copyTo(output)
-                        }
-                    }
-                    client.completePendingCommand()
-                } catch (exception: Exception) {
-                    Logger.error(TAG, "Failed to stream FTP document", exception)
-                } finally {
-                    disconnectFtpClient(client)
-                }
-            }.start()
-            return pipe[0]
-        } catch (exception: Exception) {
-            disconnectFtpClient(client)
-            throw exception
+        val fileSize = findRemoteFile(server, path)?.size ?: throw FileNotFoundException("File size not found")
+        return openProxyDocument(signal) { onReleased ->
+            FtpProxyFileCallback(
+                server = server,
+                path = path,
+                fileSize = fileSize,
+                onReleased = onReleased,
+            )
         }
     }
 
     private fun disconnectFtpClient(client: org.apache.commons.net.ftp.FTPClient) {
         runCatching { if (client.isConnected) client.logout() }
         runCatching { if (client.isConnected) client.disconnect() }
+    }
+
+    private fun openProxyDocument(
+        signal: CancellationSignal?,
+        createCallback: (() -> Unit) -> ProxyFileDescriptorCallback,
+    ): ParcelFileDescriptor {
+        val storageManager = context!!.getSystemService(StorageManager::class.java)
+        val handlerThread = HandlerThread("CloudDocumentProxy").apply { start() }
+        val callback = createCallback { handlerThread.quitSafely() }
+        return try {
+            val descriptor = storageManager.openProxyFileDescriptor(
+                ParcelFileDescriptor.MODE_READ_ONLY,
+                callback,
+                Handler(handlerThread.looper),
+            )
+            signal?.setOnCancelListener {
+                runCatching { descriptor.close() }
+            }
+            descriptor
+        } catch (exception: Exception) {
+            runCatching { callback.onRelease() }
+            handlerThread.quitSafely()
+            throw exception
+        }
     }
 
     private fun openSmbDocument(
@@ -458,42 +423,18 @@ class CloudDocumentsProvider : DocumentsProvider() {
                 SMB2CreateDisposition.FILE_OPEN,
                 EnumSet.noneOf(com.hierynomus.mssmb2.SMB2CreateOptions::class.java),
             )
-            val input = file.inputStream
-            val pipe = ParcelFileDescriptor.createReliablePipe()
-
-            signal?.setOnCancelListener {
-                runCatching { pipe[0].close() }
-                runCatching { pipe[1].close() }
-                runCatching { input.close() }
-                closeSmbDocumentResources(
+            val fileSize = file.getFileInformation().standardInformation.endOfFile
+            return openProxyDocument(signal) { onReleased ->
+                SmbProxyFileCallback(
                     client = client,
                     connection = connection,
                     session = session,
                     share = share,
                     file = file,
+                    fileSize = fileSize,
+                    onReleased = onReleased,
                 )
             }
-
-            Thread {
-                try {
-                    ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { output ->
-                        input.use { source ->
-                            source.copyTo(output)
-                        }
-                    }
-                } catch (exception: Exception) {
-                    Logger.error(TAG, "Failed to stream SMB document", exception)
-                } finally {
-                    closeSmbDocumentResources(
-                        client = client,
-                        connection = connection,
-                        session = session,
-                        share = share,
-                        file = file,
-                    )
-                }
-            }.start()
-            return pipe[0]
         } catch (exception: Exception) {
             closeSmbDocumentResources(
                 client = client,
@@ -518,6 +459,12 @@ class CloudDocumentsProvider : DocumentsProvider() {
         runCatching { session?.close() }
         runCatching { connection?.close() }
         runCatching { client.close() }
+    }
+
+    private fun findRemoteFile(server: RemoteServer, path: String): RemoteFile? {
+        val normalizedPath = path.removeSuffix("/")
+        return listFiles(server, parentPathOf(path))
+            .firstOrNull { file -> file.path.removeSuffix("/") == normalizedPath }
     }
 
     private fun getServers(): List<RemoteServer> = runCatching {
@@ -662,6 +609,207 @@ class CloudDocumentsProvider : DocumentsProvider() {
             }
     }
 
+    private abstract inner class CloudProxyFileCallback(
+        private val fileSize: Long,
+        private val onReleased: () -> Unit,
+    ) : ProxyFileDescriptorCallback() {
+
+        private var isReleased = false
+        private val readCache = object : LinkedHashMap<Long, ByteArray>(REMOTE_READ_CACHE_MAX_BLOCKS, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, ByteArray>?): Boolean = size > REMOTE_READ_CACHE_MAX_BLOCKS
+        }
+
+        override fun onGetSize(): Long {
+            if (fileSize >= 0L) return fileSize
+            throw ErrnoException("onGetSize", OsConstants.EIO)
+        }
+
+        final override fun onRelease() {
+            if (isReleased) return
+            isReleased = true
+            runCatching { closeResources() }
+            onReleased()
+        }
+
+        protected fun readSizeAt(offset: Long, requestedSize: Int): Int {
+            if (requestedSize <= 0) return 0
+            if (offset >= fileSize) return 0
+            return minOf(requestedSize.toLong(), fileSize - offset).toInt()
+        }
+
+        protected fun readCachedAt(
+            offset: Long,
+            requestedSize: Int,
+            data: ByteArray,
+            fetchBlock: (offset: Long, size: Int) -> ByteArray,
+        ): Int {
+            val bytesToRead = readSizeAt(offset, requestedSize)
+            if (bytesToRead <= 0) return 0
+
+            var copied = 0
+            synchronized(readCache) {
+                while (copied < bytesToRead) {
+                    val currentOffset = offset + copied
+                    val blockOffset = currentOffset % REMOTE_READ_CACHE_BLOCK_SIZE_BYTES
+                    val blockStart = currentOffset - blockOffset
+                    val block = readCache[blockStart] ?: run {
+                        val blockSize = readSizeAt(blockStart, REMOTE_READ_CACHE_BLOCK_SIZE_BYTES)
+                        fetchBlock(blockStart, blockSize).also { bytes ->
+                            if (bytes.size == blockSize) readCache[blockStart] = bytes
+                        }
+                    }
+                    val copyStart = blockOffset.toInt()
+                    if (copyStart >= block.size) return copied
+
+                    val copySize = minOf(bytesToRead - copied, block.size - copyStart)
+                    System.arraycopy(block, copyStart, data, copied, copySize)
+                    copied += copySize
+                }
+            }
+            return copied
+        }
+
+        protected fun toErrnoException(
+            functionName: String,
+            exception: Exception,
+        ): ErrnoException {
+            Logger.error(TAG, "Failed to read cloud document", exception)
+            return ErrnoException(functionName, OsConstants.EIO)
+        }
+
+        protected open fun closeResources() = Unit
+    }
+
+    private inner class WebDavProxyFileCallback(
+        private val url: String,
+        private val authHeaders: Map<String, String>,
+        fileSize: Long,
+        private val httpClient: OkHttpClient,
+        onReleased: () -> Unit,
+    ) : CloudProxyFileCallback(fileSize, onReleased) {
+
+        override fun onRead(
+            offset: Long,
+            size: Int,
+            data: ByteArray,
+        ): Int = try {
+            readCachedAt(offset, size, data) { blockOffset, blockSize ->
+                val requestBuilder = Request.Builder()
+                    .url(url)
+                    .header("Range", "bytes=$blockOffset-${blockOffset + blockSize - 1L}")
+                authHeaders.forEach { (key, value) ->
+                    requestBuilder.header(key, value)
+                }
+                httpClient.newCall(requestBuilder.build()).execute().use { response ->
+                    val body = response.body
+                    if (response.code != HTTP_PARTIAL_CONTENT_CODE && (blockOffset > 0L || !response.isSuccessful)) {
+                        throw IOException("HTTP ${response.code}")
+                    }
+                    body.byteStream().use { input ->
+                        input.readBytesUpTo(blockSize)
+                    }
+                }
+            }
+        } catch (exception: Exception) {
+            throw toErrnoException("onRead", exception)
+        }
+    }
+
+    private inner class FtpProxyFileCallback(
+        private val server: RemoteServer,
+        private val path: String,
+        fileSize: Long,
+        onReleased: () -> Unit,
+    ) : CloudProxyFileCallback(fileSize, onReleased) {
+
+        override fun onRead(
+            offset: Long,
+            size: Int,
+            data: ByteArray,
+        ): Int = try {
+            readCachedAt(offset, size, data) { blockOffset, blockSize ->
+                val client = org.apache.commons.net.ftp.FTPClient().apply {
+                    connectTimeout = FtpClient.CONNECT_TIMEOUT_MS
+                    dataTimeout = java.time.Duration.ofMillis(FtpClient.DATA_TIMEOUT_MS.toLong())
+                    setControlEncoding(Charsets.UTF_8.name())
+                    setAutodetectUTF8(true)
+                }
+                try {
+                    client.connect(server.host, server.port ?: FtpClient.DEFAULT_PORT)
+                    val loginOk = if (server.username.isBlank()) {
+                        client.login("anonymous", "")
+                    } else {
+                        client.login(server.username, server.password)
+                    }
+                    if (!loginOk) throw IOException("FTP login failed")
+
+                    client.enterLocalPassiveMode()
+                    client.setFileType(org.apache.commons.net.ftp.FTPClient.BINARY_FILE_TYPE)
+                    client.setRestartOffset(blockOffset)
+                    val input = client.retrieveFileStream(path) ?: throw IOException("FTP file not found")
+                    input.use { source ->
+                        source.readBytesUpTo(blockSize)
+                    }.also {
+                        client.completePendingCommand()
+                    }
+                } finally {
+                    runCatching { if (client.isConnected) client.logout() }
+                    runCatching { if (client.isConnected) client.disconnect() }
+                }
+            }
+        } catch (exception: Exception) {
+            throw toErrnoException("onRead", exception)
+        }
+    }
+
+    private inner class SmbProxyFileCallback(
+        private val client: SMBClient,
+        private val connection: com.hierynomus.smbj.connection.Connection?,
+        private val session: com.hierynomus.smbj.session.Session?,
+        private val share: DiskShare?,
+        private val file: com.hierynomus.smbj.share.File?,
+        fileSize: Long,
+        onReleased: () -> Unit,
+    ) : CloudProxyFileCallback(fileSize, onReleased) {
+
+        override fun onRead(
+            offset: Long,
+            size: Int,
+            data: ByteArray,
+        ): Int {
+            val targetFile = file ?: return 0
+            val bytesToRead = readSizeAt(offset, size)
+            if (bytesToRead <= 0) return 0
+
+            return try {
+                synchronized(targetFile) {
+                    var total = 0
+                    while (total < bytesToRead) {
+                        val read = targetFile.read(
+                            data,
+                            offset + total,
+                            total,
+                            bytesToRead - total,
+                        )
+                        if (read <= 0) break
+                        total += read
+                    }
+                    total
+                }
+            } catch (exception: Exception) {
+                throw toErrnoException("onRead", exception)
+            }
+        }
+
+        override fun closeResources() {
+            runCatching { file?.close() }
+            runCatching { share?.close() }
+            runCatching { session?.close() }
+            runCatching { connection?.close() }
+            runCatching { client.close() }
+        }
+    }
+
     private fun normalizeDirectoryPath(server: RemoteServer, path: String): String = when (server.protocol) {
         ServerProtocol.SMB -> SmbClient.normalizeRemotePath(path, isDirectory = true)
         ServerProtocol.WEBDAV,
@@ -680,11 +828,14 @@ class CloudDocumentsProvider : DocumentsProvider() {
 
     companion object {
         private const val TAG = "CloudDocumentsProvider"
+        private const val HTTP_PARTIAL_CONTENT_CODE = 206
         private const val ROOT_ID = "cloud"
         private const val ROOT_DOCUMENT_ID = "root"
         private const val ROOT_TITLE = "Only Player"
         private const val CONNECT_TIMEOUT_SECONDS = 15L
         private const val READ_TIMEOUT_SECONDS = 30L
+        private const val REMOTE_READ_CACHE_BLOCK_SIZE_BYTES = 512 * 1024
+        private const val REMOTE_READ_CACHE_MAX_BLOCKS = 8
         private const val FALLBACK_VIDEO_MIME = "video/*"
         private const val FALLBACK_BINARY_MIME = "application/octet-stream"
         private const val FALLBACK_SUBTITLE_MIME = "application/x-subrip"
@@ -757,4 +908,28 @@ interface CloudDocumentsProviderEntryPoint {
     fun webDavClient(): WebDavClient
     fun ftpClient(): FtpClient
     fun smbClient(): SmbClient
+}
+
+private fun readInputUpTo(
+    input: InputStream,
+    target: ByteArray,
+    targetSize: Int,
+): Int {
+    var total = 0
+    while (total < targetSize) {
+        val read = input.read(target, total, targetSize - total)
+        if (read <= 0) break
+        total += read
+    }
+    return total
+}
+
+private fun InputStream.readBytesUpTo(targetSize: Int): ByteArray {
+    val target = ByteArray(targetSize)
+    val read = readInputUpTo(
+        input = this,
+        target = target,
+        targetSize = targetSize,
+    )
+    return if (read == target.size) target else target.copyOf(read)
 }
