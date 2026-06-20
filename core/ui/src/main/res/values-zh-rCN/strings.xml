@@ -208,6 +208,8 @@
     <string name="enter_seconds">输入秒数</string>
     <string name="dim_video_when_controls_visible">显示控制栏时让画面变暗</string>
     <string name="dim_video_when_controls_visible_description">控制栏显示期间，让画面稍微变暗，以增加按钮可读性</string>
+    <string name="pause_at_end_of_queue">播完最后一个视频时暂停</string>
+    <string name="pause_at_end_of_queue_description">最后一个视频播完后留在播放器，并停在最后一帧</string>
     <string name="seek_increment">跳转增量</string>
     <string name="seconds">%1$s 秒</string>
     <string name="subtitle_text_encoding">字幕文本编码</string>

@@ -22,6 +22,7 @@ fun BoxScope.OverlayShowView(
     player: Player,
     overlayView: OverlayView?,
     videoContentScale: VideoContentScale,
+    isCustomVideoZoomActive: Boolean = false,
     playerPreferences: PlayerPreferences,
     sleepTimerState: SleepTimerState,
     onDismiss: () -> Unit = {},
@@ -77,6 +78,7 @@ fun BoxScope.OverlayShowView(
     VideoContentScaleSelectorView(
         shouldShow = overlayView == OverlayView.VIDEO_CONTENT_SCALE,
         videoContentScale = videoContentScale,
+        isCustomZoomActive = isCustomVideoZoomActive,
         onVideoContentScaleChanged = onVideoContentScaleChanged,
         onShowVideoFilters = onShowVideoFilters,
         onDismiss = onDismiss,
@@ -114,6 +116,18 @@ fun BoxScope.OverlayShowView(
         onAddMarkClick = onAddPlaybackMarkClick,
         onMarkClick = onPlaybackMarkClick,
         onDeleteMarkClick = onDeletePlaybackMarkClick,
+    )
+
+    LoopModeSelectorView(
+        shouldShow = overlayView == OverlayView.LOOP_MODE,
+        player = player,
+        onDismiss = onDismiss,
+    )
+
+    ShuffleModeSelectorView(
+        shouldShow = overlayView == OverlayView.SHUFFLE_MODE,
+        player = player,
+        onDismiss = onDismiss,
     )
 }
 
@@ -175,4 +189,6 @@ enum class OverlayView {
     SLEEP_TIMER,
     DECODER_PRIORITY,
     PLAYBACK_MARKS,
+    LOOP_MODE,
+    SHUFFLE_MODE,
 }

@@ -1,6 +1,5 @@
 package one.only.player.feature.player
 
-import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -45,6 +44,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
@@ -81,6 +82,8 @@ import one.only.player.core.model.ThemeConfig
 import one.only.player.core.ui.theme.OnlyPlayerTheme
 import one.only.player.feature.player.extensions.OpenDocumentWithInitialUri
 import one.only.player.feature.player.extensions.copy
+import one.only.player.feature.player.extensions.isAtEndOfCurrentMediaItem
+import one.only.player.feature.player.extensions.isCurrentMediaItemLast
 import one.only.player.feature.player.extensions.registerForSuspendActivityResult
 import one.only.player.feature.player.extensions.setExtras
 import one.only.player.feature.player.extensions.toActivityOrientation
@@ -178,7 +181,7 @@ internal fun buildPlaybackPlaylist(
     )
 }
 
-@SuppressLint("UnsafeOptInUsageError")
+@androidx.annotation.OptIn(UnstableApi::class)
 @AndroidEntryPoint
 open class PlayerActivity : AppCompatActivity() {
 
@@ -215,6 +218,7 @@ open class PlayerActivity : AppCompatActivity() {
     private val onWindowAttributesChangedListener = CopyOnWriteArrayList<Consumer<WindowManager.LayoutParams?>>()
 
     private var isPlaybackFinished = false
+    private var hasPausedAtEndOfQueue = false
     private var shouldPlayInBackground: Boolean = false
     private var isIntentNew: Boolean = true
     private var keyboardEventHandler: ((KeyEvent) -> Boolean)? = null
@@ -742,8 +746,19 @@ open class PlayerActivity : AppCompatActivity() {
     private fun hasMediaReadPermission(): Boolean = ContextCompat.checkSelfPermission(this, storagePermission) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
     private fun playbackStateListener() = object : Player.Listener {
+        override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+            super.onTimelineChanged(timeline, reason)
+            if (!hasPausedAtEndOfQueue || !timeline.isEmpty) return
+
+            hasPausedAtEndOfQueue = false
+            isPlaybackFinished = true
+            updateKeepScreenOnFlag()
+            finish()
+        }
+
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             super.onMediaItemTransition(mediaItem, reason)
+            hasPausedAtEndOfQueue = false
             intent.data = mediaItem?.localConfiguration?.uri
             updateKeepScreenOnFlag()
         }
@@ -757,6 +772,18 @@ open class PlayerActivity : AppCompatActivity() {
             super.onPlaybackStateChanged(playbackState)
             when (playbackState) {
                 Player.STATE_ENDED -> {
+                    val controller = mediaController
+                    if (controller != null && !hasPausedAtEndOfQueue && controller.shouldPauseAtEndOfQueue()) {
+                        hasPausedAtEndOfQueue = true
+                        isPlaybackFinished = true
+                        controller.pause()
+                        updateKeepScreenOnFlag()
+                        return
+                    }
+                    if (controller?.playWhenReady == false && hasPausedAtEndOfQueue) {
+                        updateKeepScreenOnFlag()
+                        return
+                    }
                     isPlaybackFinished = mediaController?.playbackState == Player.STATE_ENDED
                     updateKeepScreenOnFlag()
                     finishAndStopPlayerSession()
@@ -766,16 +793,55 @@ open class PlayerActivity : AppCompatActivity() {
             }
         }
 
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int,
+        ) {
+            super.onPositionDiscontinuity(oldPosition, newPosition, reason)
+            val controller = mediaController ?: return
+            if (!hasPausedAtEndOfQueue || reason != Player.DISCONTINUITY_REASON_SEEK) return
+            if (controller.playWhenReady || controller.isAtEndOfCurrentMediaItem()) return
+
+            hasPausedAtEndOfQueue = false
+            updateKeepScreenOnFlag()
+        }
+
         override fun onPlayWhenReadyChanged(shouldPlayWhenReady: Boolean, reason: Int) {
             super.onPlayWhenReadyChanged(shouldPlayWhenReady, reason)
 
-            if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) {
-                if (mediaController?.repeatMode != Player.REPEAT_MODE_OFF) return
-                isPlaybackFinished = true
-                finishAndStopPlayerSession()
+            if (reason != Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) {
+                val controller = mediaController ?: return
+                if (shouldPlayWhenReady && hasPausedAtEndOfQueue && controller.repeatMode == Player.REPEAT_MODE_OFF && controller.isCurrentMediaItemLast()) {
+                    hasPausedAtEndOfQueue = false
+                    isPlaybackFinished = true
+                    finishAndStopPlayerSession()
+                    return
+                }
+                if (shouldPlayWhenReady && hasPausedAtEndOfQueue) {
+                    hasPausedAtEndOfQueue = false
+                }
+                return
             }
+
+            if (mediaController?.repeatMode != Player.REPEAT_MODE_OFF) return
+            val controller = mediaController ?: return
+            if (controller.shouldPauseAtEndOfQueue()) {
+                hasPausedAtEndOfQueue = true
+                isPlaybackFinished = true
+                updateKeepScreenOnFlag()
+                return
+            }
+            hasPausedAtEndOfQueue = false
+            isPlaybackFinished = true
+            finishAndStopPlayerSession()
         }
     }
+
+    private fun MediaController.shouldPauseAtEndOfQueue(): Boolean = playerPreferences?.shouldPauseAtEndOfQueue == true &&
+        !hasPausedAtEndOfQueue &&
+        repeatMode == Player.REPEAT_MODE_OFF &&
+        isCurrentMediaItemLast()
 
     override fun finish() {
         if (playerApi.shouldReturnResult) {

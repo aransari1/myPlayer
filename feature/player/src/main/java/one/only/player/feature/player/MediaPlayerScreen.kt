@@ -125,6 +125,7 @@ import one.only.player.feature.player.state.seekToPositionFormated
 import one.only.player.feature.player.ui.AudioTrackSelectorContent
 import one.only.player.feature.player.ui.DecoderPrioritySelectorContent
 import one.only.player.feature.player.ui.DoubleTapIndicator
+import one.only.player.feature.player.ui.LoopModeSelectorContent
 import one.only.player.feature.player.ui.MenuOverlayView
 import one.only.player.feature.player.ui.MenuRootContent
 import one.only.player.feature.player.ui.MenuRoute
@@ -133,6 +134,7 @@ import one.only.player.feature.player.ui.OverlayView
 import one.only.player.feature.player.ui.PlaybackMarksContent
 import one.only.player.feature.player.ui.PlaybackSpeedSelectorContent
 import one.only.player.feature.player.ui.PlaylistContent
+import one.only.player.feature.player.ui.ShuffleModeSelectorContent
 import one.only.player.feature.player.ui.SleepTimerSelectorContent
 import one.only.player.feature.player.ui.SubtitleConfiguration
 import one.only.player.feature.player.ui.SubtitleSelectorContent
@@ -385,6 +387,8 @@ internal fun MediaPlayerScreen(
         OverlayView.SLEEP_TIMER -> MenuRoute.SleepTimer
         OverlayView.DECODER_PRIORITY -> MenuRoute.Decoder
         OverlayView.PLAYBACK_MARKS -> MenuRoute.PlaybackMarks
+        OverlayView.LOOP_MODE -> MenuRoute.LoopMode
+        OverlayView.SHUFFLE_MODE -> MenuRoute.ShuffleMode
     }
     fun openOverlayPanel(target: OverlayView) {
         controlsVisibilityState.hideControls()
@@ -652,6 +656,7 @@ internal fun MediaPlayerScreen(
                 itemBounds = playerControlItemBounds,
                 zoneBounds = playerControlZoneBounds,
             )
+
             else -> customizingPlayerControlsLayout.dropControl(
                 control = control,
                 dropPosition = dropPosition,
@@ -732,34 +737,51 @@ internal fun MediaPlayerScreen(
         if (isCustomizingControls && action != PlayerDebugCommandBridge.ACTION_TOGGLE_CUSTOMIZE_CONTROLS) return false
         when (action) {
             PlayerDebugCommandBridge.ACTION_BACK -> onBackClick()
+
             PlayerDebugCommandBridge.ACTION_ROTATE -> rotationState.rotate()
+
             PlayerDebugCommandBridge.ACTION_TOGGLE_AMBIENCE -> toggleAmbienceMode()
+
             PlayerDebugCommandBridge.ACTION_TOGGLE_MIRROR -> isVideoMirrored = !isVideoMirrored
+
             PlayerDebugCommandBridge.ACTION_SHOW_CONTROLS -> controlsVisibilityState.showControls()
+
             PlayerDebugCommandBridge.ACTION_HIDE_CONTROLS -> controlsVisibilityState.hideControls()
+
             PlayerDebugCommandBridge.ACTION_SHOW_PLAYLIST -> openOverlayPanel(OverlayView.PLAYLIST)
+
             PlayerDebugCommandBridge.ACTION_SHOW_SPEED -> openOverlayPanel(OverlayView.PLAYBACK_SPEED)
+
             PlayerDebugCommandBridge.ACTION_SHOW_AUDIO -> openOverlayPanel(OverlayView.AUDIO_SELECTOR)
+
             PlayerDebugCommandBridge.ACTION_SHOW_SUBTITLE -> openOverlayPanel(OverlayView.SUBTITLE_SELECTOR)
+
             PlayerDebugCommandBridge.ACTION_LOCK -> {
                 controlsVisibilityState.showControls()
                 controlsVisibilityState.lockControls()
             }
+
             PlayerDebugCommandBridge.ACTION_UNLOCK -> {
                 controlsVisibilityState.showControls()
                 controlsVisibilityState.unlockControls()
             }
+
             PlayerDebugCommandBridge.ACTION_TOGGLE_LOCK -> {
                 controlsVisibilityState.showControls()
                 if (controlsVisibilityState.isControlsLocked) controlsVisibilityState.unlockControls() else controlsVisibilityState.lockControls()
             }
+
             PlayerDebugCommandBridge.ACTION_CYCLE_SCALE -> {
                 videoZoomAndContentScaleState.switchToNextVideoContentScale()
                 controlsVisibilityState.showControls()
             }
+
             PlayerDebugCommandBridge.ACTION_SHOW_SCALE -> openOverlayPanel(OverlayView.VIDEO_CONTENT_SCALE)
+
             PlayerDebugCommandBridge.ACTION_SHOW_DECODER -> openOverlayPanel(OverlayView.DECODER_PRIORITY)
+
             PlayerDebugCommandBridge.ACTION_SHOW_VIDEO_FILTERS -> showVideoFilters()
+
             PlayerDebugCommandBridge.ACTION_PIP -> {
                 if (!pictureInPictureState.hasPipPermission) {
                     pictureInPictureState.openPictureInPictureSettings()
@@ -767,10 +789,15 @@ internal fun MediaPlayerScreen(
                     pictureInPictureState.enterPictureInPictureMode()
                 }
             }
+
             PlayerDebugCommandBridge.ACTION_SCREENSHOT -> onScreenshotClick()
+
             PlayerDebugCommandBridge.ACTION_BACKGROUND -> onPlayInBackgroundClick()
+
             PlayerDebugCommandBridge.ACTION_SHOW_SLEEP_TIMER -> openOverlayPanel(OverlayView.SLEEP_TIMER)
+
             PlayerDebugCommandBridge.ACTION_SHOW_MARKS -> openOverlayPanel(OverlayView.PLAYBACK_MARKS)
+
             PlayerDebugCommandBridge.ACTION_MARK_ADD -> {
                 val didAdd = runBlocking {
                     viewModel.addPlaybackMarkNow(
@@ -782,12 +809,14 @@ internal fun MediaPlayerScreen(
                 if (!didAdd) return false
                 controlsVisibilityState.showControls()
             }
+
             PlayerDebugCommandBridge.ACTION_MARK_LIST -> {
                 extras?.putString(
                     "value",
                     playbackMarks.joinToString(separator = "|") { mark -> "${mark.id}@${mark.positionMs}" },
                 )
             }
+
             PlayerDebugCommandBridge.ACTION_MARK_SEEK -> {
                 val markId = markIdFrom(extras)
                 val positionMs = markPositionFrom(extras)
@@ -797,16 +826,19 @@ internal fun MediaPlayerScreen(
                     ?: return false
                 seekToPlaybackMark(mark)
             }
+
             PlayerDebugCommandBridge.ACTION_MARK_DELETE -> {
                 val markId = markIdFrom(extras) ?: playbackMarks.firstOrNull()?.id ?: return false
                 runBlocking { viewModel.deletePlaybackMarkNow(markId) }
             }
+
             PlayerDebugCommandBridge.ACTION_SHOW_MENU -> {
                 if (isModern) {
                     controlsVisibilityState.hideControls()
                     menuRouteStack = listOf(MenuRoute.Root)
                 }
             }
+
             PlayerDebugCommandBridge.ACTION_MENU_BACK -> {
                 if (menuRouteStack.size > 1) {
                     popMenuRoute()
@@ -814,13 +846,16 @@ internal fun MediaPlayerScreen(
                     dismissOverlay()
                 }
             }
+
             PlayerDebugCommandBridge.ACTION_TOGGLE_CUSTOMIZE_CONTROLS -> {
                 if (isModern) return false
                 if (isCustomizingControls) exitControlCustomization() else enterControlCustomization()
             }
+
             PlayerDebugCommandBridge.ACTION_STRESS_PAN_ZOOM -> {
                 stressPanZoom(extras)
             }
+
             else -> return false
         }
         return true
@@ -1046,8 +1081,7 @@ internal fun MediaPlayerScreen(
                                             if (isCustomizingControls) {
                                                 toggleControlVisibility(PlayerControl.SCALE)
                                             } else {
-                                                controlsVisibilityState.showControls()
-                                                videoZoomAndContentScaleState.switchToNextVideoContentScale()
+                                                openOverlayPanel(OverlayView.VIDEO_CONTENT_SCALE)
                                             }
                                         },
                                         onVideoContentScaleLongClick = {
@@ -1105,11 +1139,19 @@ internal fun MediaPlayerScreen(
                                             }
                                         },
                                         onLoopClick = {
-                                            toggleControlVisibility(PlayerControl.LOOP)
-                                        }.takeIf { isCustomizingControls },
+                                            if (isCustomizingControls) {
+                                                toggleControlVisibility(PlayerControl.LOOP)
+                                            } else {
+                                                openOverlayPanel(OverlayView.LOOP_MODE)
+                                            }
+                                        },
                                         onShuffleClick = {
-                                            toggleControlVisibility(PlayerControl.SHUFFLE)
-                                        }.takeIf { isCustomizingControls },
+                                            if (isCustomizingControls) {
+                                                toggleControlVisibility(PlayerControl.SHUFFLE)
+                                            } else {
+                                                openOverlayPanel(OverlayView.SHUFFLE_MODE)
+                                            }
+                                        },
                                         sleepTimerState = sleepTimerState,
                                     )
                                 }
@@ -1118,8 +1160,11 @@ internal fun MediaPlayerScreen(
                         middleView = {
                             when {
                                 seekGestureState.seekAmount != null -> InfoView(info = "${seekGestureState.seekAmountFormatted}\n[${seekGestureState.seekToPositionFormated}]")
+
                                 videoZoomAndContentScaleState.isZooming -> InfoView(info = "${(videoZoomAndContentScaleState.zoom * 100).toInt()}%")
+
                                 videoZoomAndContentScaleState.shouldShowContentScaleIndicator -> InfoView(info = stringResource(videoZoomAndContentScaleState.videoContentScale.nameRes()))
+
                                 !isModern && controlsVisibilityState.isControlsVisible -> ControlsMiddleView(
                                     player = player,
                                     isCustomizingControls = isCustomizingControls,
@@ -1133,6 +1178,7 @@ internal fun MediaPlayerScreen(
                                     onPlayPauseClick = { },
                                     onNextClick = { },
                                 )
+
                                 else -> Unit
                             }
                         },
@@ -1235,11 +1281,19 @@ internal fun MediaPlayerScreen(
                                             }
                                         },
                                         onLoopClick = {
-                                            toggleControlVisibility(PlayerControl.LOOP)
-                                        }.takeIf { isCustomizingControls },
+                                            if (isCustomizingControls) {
+                                                toggleControlVisibility(PlayerControl.LOOP)
+                                            } else {
+                                                openOverlayPanel(OverlayView.LOOP_MODE)
+                                            }
+                                        },
                                         onShuffleClick = {
-                                            toggleControlVisibility(PlayerControl.SHUFFLE)
-                                        }.takeIf { isCustomizingControls },
+                                            if (isCustomizingControls) {
+                                                toggleControlVisibility(PlayerControl.SHUFFLE)
+                                            } else {
+                                                openOverlayPanel(OverlayView.SHUFFLE_MODE)
+                                            }
+                                        },
                                         onSleepTimerClick = {
                                             if (isCustomizingControls) {
                                                 toggleControlVisibility(PlayerControl.SLEEP_TIMER)
@@ -1275,8 +1329,7 @@ internal fun MediaPlayerScreen(
                                             if (isCustomizingControls) {
                                                 toggleControlVisibility(PlayerControl.SCALE)
                                             } else {
-                                                controlsVisibilityState.showControls()
-                                                videoZoomAndContentScaleState.switchToNextVideoContentScale()
+                                                openOverlayPanel(OverlayView.VIDEO_CONTENT_SCALE)
                                             }
                                         },
                                         onVideoContentScaleLongClick = {
@@ -1453,6 +1506,8 @@ internal fun MediaPlayerScreen(
                             isMuted = volumeState.isMuted,
                             isAmbienceModeEnabled = isAmbienceModeEnabled,
                             isVideoMirrored = isVideoMirrored,
+                            repeatMode = player.repeatMode,
+                            isShuffleModeEnabled = player.shuffleModeEnabled,
                             isPipSupported = pictureInPictureState.isPipSupported,
                             isTakingScreenshot = isTakingScreenshot,
                             onNavigate = ::navigateToMenuRoute,
@@ -1494,23 +1549,13 @@ internal fun MediaPlayerScreen(
                                 onPlayInBackgroundClick()
                                 dismissOverlay()
                             },
-                            onLoopClick = {
-                                player.repeatMode = when (player.repeatMode) {
-                                    Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ONE
-                                    Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_ALL
-                                    else -> Player.REPEAT_MODE_OFF
-                                }
-                                dismissOverlay()
-                            },
-                            onShuffleClick = {
-                                player.shuffleModeEnabled = !player.shuffleModeEnabled
-                                dismissOverlay()
-                            },
                         )
+
                         MenuRoute.Audio -> AudioTrackSelectorContent(
                             player = player,
                             onDismiss = ::dismissOverlay,
                         )
+
                         MenuRoute.Subtitle -> SubtitleSelectorContent(
                             player = player,
                             onSelectSubtitleClick = onSelectSubtitleClick,
@@ -1520,15 +1565,19 @@ internal fun MediaPlayerScreen(
                             onEvent = viewModel::onSubtitleOptionEvent,
                             onDismiss = ::dismissOverlay,
                         )
+
                         MenuRoute.PlaybackSpeed -> PlaybackSpeedSelectorContent(player = player)
+
                         MenuRoute.VideoContentScale -> VideoContentScaleSelectorContent(
                             videoContentScale = videoZoomAndContentScaleState.videoContentScale,
+                            isCustomZoomActive = !videoZoomAndContentScaleState.zoom.isDefaultVideoZoom(),
                             onVideoContentScaleChanged = {
                                 videoZoomAndContentScaleState.onVideoContentScaleChanged(it)
                             },
                             onShowVideoFilters = null,
                             onDismiss = ::dismissOverlay,
                         )
+
                         MenuRoute.VideoFilters -> VideoFiltersPanel(
                             modifier = Modifier.fillMaxSize(),
                             preferences = playerPreferences,
@@ -1538,14 +1587,17 @@ internal fun MediaPlayerScreen(
                             },
                             onConfirmPreferences = viewModel::updateVideoFilters,
                         )
+
                         MenuRoute.Playlist -> PlaylistContent(
                             isVisible = true,
                             player = player,
                         )
+
                         MenuRoute.SleepTimer -> SleepTimerSelectorContent(
                             sleepTimerState = sleepTimerState,
                             onDismiss = ::dismissOverlay,
                         )
+
                         MenuRoute.Decoder -> DecoderPrioritySelectorContent(
                             currentDecoderPriority = playerPreferences.decoderPriority,
                             onDecoderPriorityClick = {
@@ -1554,12 +1606,23 @@ internal fun MediaPlayerScreen(
                             },
                             onDismiss = ::dismissOverlay,
                         )
+
                         MenuRoute.PlaybackMarks -> PlaybackMarksContent(
                             modifier = Modifier.testTag("panel_playback_marks"),
                             marks = playbackMarks,
                             onAddMarkClick = ::addPlaybackMark,
                             onMarkClick = ::seekToPlaybackMark,
                             onDeleteMarkClick = { mark -> viewModel.deletePlaybackMark(mark.id) },
+                        )
+
+                        MenuRoute.LoopMode -> LoopModeSelectorContent(
+                            player = player,
+                            onDismiss = ::dismissOverlay,
+                        )
+
+                        MenuRoute.ShuffleMode -> ShuffleModeSelectorContent(
+                            player = player,
+                            onDismiss = ::dismissOverlay,
                         )
                     }
                 }
@@ -1568,6 +1631,7 @@ internal fun MediaPlayerScreen(
                     player = player,
                     overlayView = overlayView,
                     videoContentScale = videoZoomAndContentScaleState.videoContentScale,
+                    isCustomVideoZoomActive = !videoZoomAndContentScaleState.zoom.isDefaultVideoZoom(),
                     playerPreferences = activePlayerPreferences,
                     sleepTimerState = sleepTimerState,
                     onDismiss = ::dismissOverlay,
@@ -1653,6 +1717,8 @@ private fun PlayerPreferences.hasSameSubtitleStyle(other: PlayerPreferences): Bo
     subtitleShadowStrength == other.subtitleShadowStrength &&
     subtitleBottomPaddingFraction == other.subtitleBottomPaddingFraction
 
+private fun Float.isDefaultVideoZoom(): Boolean = kotlin.math.abs(this - 1f) < 0.0001f
+
 @Composable
 private fun titleForMenuRoute(route: MenuRoute?): String = when (route) {
     null, MenuRoute.Root -> stringResource(coreUiR.string.menu)
@@ -1665,6 +1731,8 @@ private fun titleForMenuRoute(route: MenuRoute?): String = when (route) {
     MenuRoute.SleepTimer -> stringResource(coreUiR.string.sleep_timer)
     MenuRoute.Decoder -> stringResource(coreUiR.string.decoder_priority)
     MenuRoute.PlaybackMarks -> stringResource(coreUiR.string.playback_marks)
+    MenuRoute.LoopMode -> stringResource(coreUiR.string.loop_mode)
+    MenuRoute.ShuffleMode -> stringResource(coreUiR.string.shuffle)
 }
 
 @Composable

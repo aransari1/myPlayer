@@ -29,6 +29,7 @@ data class PlayerPreferences(
     val isVideoSharpeningFilterEnabled: Boolean = false,
     val videoSharpening: Float = DEFAULT_VIDEO_SHARPENING,
     val shouldAutoPlay: Boolean = true,
+    val shouldPauseAtEndOfQueue: Boolean = false,
     val shouldAutoEnterPip: Boolean = true,
     val shouldAutoPlayInBackground: Boolean = false,
     val loopMode: LoopMode = LoopMode.OFF,

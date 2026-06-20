@@ -157,6 +157,9 @@ internal suspend fun DebugCommandEntryPoint.setSetting(
         "player.autoplay" -> updatePlayerBoolean(value) { preferences, isEnabled ->
             preferences.copy(shouldAutoPlay = isEnabled)
         }
+        "player.pause_at_end_of_queue" -> updatePlayerBoolean(value) { preferences, isEnabled ->
+            preferences.copy(shouldPauseAtEndOfQueue = isEnabled)
+        }
         "player.auto_pip" -> updatePlayerBoolean(value) { preferences, isEnabled ->
             preferences.copy(shouldAutoEnterPip = isEnabled)
         }
@@ -336,6 +339,7 @@ internal suspend fun DebugCommandEntryPoint.toggleSetting(target: String?) {
         "player.remember_orientation" -> togglePlayer { it.copy(shouldRememberPlayerScreenOrientation = !it.shouldRememberPlayerScreenOrientation, lastPlayerScreenOrientation = null) }
         "player.resume" -> togglePlayer { it.copy(resume = if (it.resume == Resume.YES) Resume.NO else Resume.YES) }
         "player.autoplay" -> togglePlayer { it.copy(shouldAutoPlay = !it.shouldAutoPlay) }
+        "player.pause_at_end_of_queue" -> togglePlayer { it.copy(shouldPauseAtEndOfQueue = !it.shouldPauseAtEndOfQueue) }
         "player.auto_pip" -> togglePlayer { it.copy(shouldAutoEnterPip = !it.shouldAutoEnterPip) }
         "player.background_play" -> togglePlayer { it.copy(shouldAutoPlayInBackground = !it.shouldAutoPlayInBackground) }
         "player.remember_brightness" -> togglePlayer { it.copy(shouldRememberPlayerBrightness = !it.shouldRememberPlayerBrightness) }

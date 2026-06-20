@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.Player
 import one.only.player.core.ui.R
 import one.only.player.core.ui.designsystem.NextIcons
 
@@ -31,6 +32,8 @@ fun MenuRootContent(
     isMuted: Boolean,
     isAmbienceModeEnabled: Boolean,
     isVideoMirrored: Boolean,
+    repeatMode: Int,
+    isShuffleModeEnabled: Boolean,
     isPipSupported: Boolean,
     isTakingScreenshot: Boolean,
     onNavigate: (MenuRoute) -> Unit,
@@ -41,8 +44,6 @@ fun MenuRootContent(
     onPictureInPictureClick: () -> Unit,
     onScreenshotClick: () -> Unit,
     onPlayInBackgroundClick: () -> Unit,
-    onLoopClick: () -> Unit,
-    onShuffleClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -146,13 +147,15 @@ fun MenuRootContent(
             icon = NextIcons.Loop,
             text = stringResource(R.string.loop_mode),
             testTag = "menu_item_loop",
-            onClick = onLoopClick,
+            onClick = { onNavigate(MenuRoute.LoopMode) },
+            isSelected = repeatMode != Player.REPEAT_MODE_OFF,
         )
         MenuItemRow(
             icon = NextIcons.Shuffle,
             text = stringResource(R.string.shuffle),
             testTag = "menu_item_shuffle",
-            onClick = onShuffleClick,
+            onClick = { onNavigate(MenuRoute.ShuffleMode) },
+            isSelected = isShuffleModeEnabled,
         )
     }
 }

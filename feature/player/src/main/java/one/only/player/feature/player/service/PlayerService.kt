@@ -20,6 +20,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Player.DISCONTINUITY_REASON_AUTO_TRANSITION
 import androidx.media3.common.Player.DISCONTINUITY_REASON_REMOVE
 import androidx.media3.common.Player.DISCONTINUITY_REASON_SEEK
+import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
@@ -107,6 +108,8 @@ import one.only.player.feature.player.extensions.audioTrackIndex
 import one.only.player.feature.player.extensions.copy
 import one.only.player.feature.player.extensions.getManuallySelectedTrackIndex
 import one.only.player.feature.player.extensions.isApproximateSeekEnabled
+import one.only.player.feature.player.extensions.isAtEndOfCurrentMediaItem
+import one.only.player.feature.player.extensions.isCurrentMediaItemLast
 import one.only.player.feature.player.extensions.isVideoEffectsAvailable
 import one.only.player.feature.player.extensions.localParentPath
 import one.only.player.feature.player.extensions.positionMs
@@ -235,6 +238,7 @@ class PlayerService : MediaSessionService() {
     private var pendingRememberedSubtitleSelection: PendingSubtitleSelection? = null
     private var assHandler: AssHandler? = null
     private var activeDecoderPriority: DecoderPriority = DecoderPriority.AUTOMATIC
+    private var hasPausedAtEndOfQueue = false
     private lateinit var fastStartMediaSourceFactory: DefaultMediaSourceFactory
     private lateinit var preciseSeekMediaSourceFactory: DefaultMediaSourceFactory
     private var sessionLoadErrorHandlingPolicy: LoadErrorHandlingPolicy? = null
@@ -282,9 +286,37 @@ class PlayerService : MediaSessionService() {
         else -> playerPreferences.defaultPlaybackSpeed
     }
 
+    private fun Player.isEndOfQueuePauseEnabled(preferences: PlayerPreferences = playerPreferences): Boolean = preferences.shouldPauseAtEndOfQueue &&
+        repeatMode == Player.REPEAT_MODE_OFF &&
+        isCurrentMediaItemLast()
+
+    private fun Player.shouldPauseAtEndOfQueue(preferences: PlayerPreferences = playerPreferences): Boolean = isEndOfQueuePauseEnabled(preferences) && !hasPausedAtEndOfQueue
+
+    private fun completePausedEndOfQueue(player: Player) {
+        hasPausedAtEndOfQueue = false
+        player.clearMediaItems()
+        player.stop()
+        stopSelf()
+    }
+
+    private fun Player.updatePauseAtEndOfMediaItems(preferences: PlayerPreferences = playerPreferences) {
+        (this as? ExoPlayer)?.pauseAtEndOfMediaItems = !preferences.shouldAutoPlay || shouldPauseAtEndOfQueue(preferences)
+    }
+
     private val playbackStateListener = object : Player.Listener {
+        override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+            super.onTimelineChanged(timeline, reason)
+            val player = mediaSession?.player ?: return
+            if (!player.isCurrentMediaItemLast()) {
+                hasPausedAtEndOfQueue = false
+            }
+            player.updatePauseAtEndOfMediaItems()
+        }
+
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             super.onMediaItemTransition(mediaItem, reason)
+            hasPausedAtEndOfQueue = false
+            mediaSession?.player?.updatePauseAtEndOfMediaItems()
             if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
                 handleRepeatedPlayback(mediaSession?.player ?: return)
                 return
@@ -372,6 +404,13 @@ class PlayerService : MediaSessionService() {
             reason: Int,
         ) {
             super.onPositionDiscontinuity(oldPosition, newPosition, reason)
+            mediaSession?.player?.let { player ->
+                if (hasPausedAtEndOfQueue && reason == DISCONTINUITY_REASON_SEEK && !player.playWhenReady && !player.isAtEndOfCurrentMediaItem()) {
+                    hasPausedAtEndOfQueue = false
+                    player.updatePauseAtEndOfMediaItems()
+                }
+            }
+
             val oldMediaItem = oldPosition.mediaItem ?: return
 
             when (reason) {
@@ -554,6 +593,11 @@ class PlayerService : MediaSessionService() {
             if (playbackState == Player.STATE_ENDED) {
                 val player = mediaSession?.player ?: return
                 player.setPlaybackSpeed(playerPreferences.defaultPlaybackSpeed)
+                if (player.isEndOfQueuePauseEnabled()) {
+                    hasPausedAtEndOfQueue = true
+                    player.pause()
+                    player.updatePauseAtEndOfMediaItems()
+                }
                 return
             }
 
@@ -573,15 +617,36 @@ class PlayerService : MediaSessionService() {
 
         override fun onPlayWhenReadyChanged(shouldPlayWhenReady: Boolean, reason: Int) {
             super.onPlayWhenReadyChanged(shouldPlayWhenReady, reason)
-            if (reason != Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) return
+            if (reason != Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) {
+                val player = mediaSession?.player ?: return
+                if (shouldPlayWhenReady && hasPausedAtEndOfQueue && player.repeatMode == Player.REPEAT_MODE_OFF && player.isCurrentMediaItemLast()) {
+                    completePausedEndOfQueue(player)
+                    return
+                }
+                if (shouldPlayWhenReady && hasPausedAtEndOfQueue) {
+                    hasPausedAtEndOfQueue = false
+                }
+                if (shouldPlayWhenReady) {
+                    player.updatePauseAtEndOfMediaItems()
+                }
+                return
+            }
 
             val player = mediaSession?.player ?: return
+            if (player.isEndOfQueuePauseEnabled()) {
+                hasPausedAtEndOfQueue = true
+                player.setPlaybackSpeed(playerPreferences.defaultPlaybackSpeed)
+                player.updatePauseAtEndOfMediaItems()
+                return
+            }
             if (player.repeatMode != Player.REPEAT_MODE_OFF) {
+                hasPausedAtEndOfQueue = false
                 player.seekTo(0)
                 handleRepeatedPlayback(player)
                 player.play()
                 return
             }
+            hasPausedAtEndOfQueue = false
             player.clearMediaItems()
             player.stop()
             stopSelf()
@@ -649,6 +714,10 @@ class PlayerService : MediaSessionService() {
 
         override fun onRepeatModeChanged(repeatMode: Int) {
             super.onRepeatModeChanged(repeatMode)
+            if (repeatMode != Player.REPEAT_MODE_OFF) {
+                hasPausedAtEndOfQueue = false
+            }
+            mediaSession?.player?.updatePauseAtEndOfMediaItems()
             serviceScope.launch {
                 preferencesRepository.updatePlayerPreferences {
                     it.copy(
@@ -1537,12 +1606,12 @@ class PlayerService : MediaSessionService() {
                 applySeekParameters(it)
                 it.addListener(playbackStateListener)
                 it.addAnalyticsListener(startupAnalyticsListener)
-                it.pauseAtEndOfMediaItems = !preferences.shouldAutoPlay
                 it.repeatMode = when (preferences.loopMode) {
                     LoopMode.OFF -> Player.REPEAT_MODE_OFF
                     LoopMode.ONE -> Player.REPEAT_MODE_ONE
                     LoopMode.ALL -> Player.REPEAT_MODE_ALL
                 }
+                it.updatePauseAtEndOfMediaItems(preferences)
                 videoEffectsCoordinator.resetPipeline()
                 videoEffectsCoordinator.apply(it, preferences)
             }
@@ -1580,6 +1649,16 @@ class PlayerService : MediaSessionService() {
                 .distinctUntilChanged { old, new -> old.isVolumeNormalizationEnabled == new.isVolumeNormalizationEnabled }
                 .collect { preferences ->
                     audioEffectsCoordinator.applyVolumeNormalization(preferences.isVolumeNormalizationEnabled)
+                }
+        }
+        serviceScope.launch {
+            preferencesRepository.playerPreferences
+                .distinctUntilChanged { old, new ->
+                    old.shouldAutoPlay == new.shouldAutoPlay &&
+                        old.shouldPauseAtEndOfQueue == new.shouldPauseAtEndOfQueue
+                }
+                .collect { preferences ->
+                    mediaSession?.player?.updatePauseAtEndOfMediaItems(preferences)
                 }
         }
         audioEffectsCoordinator.applyVolumeNormalization(playerPreferences.isVolumeNormalizationEnabled)
