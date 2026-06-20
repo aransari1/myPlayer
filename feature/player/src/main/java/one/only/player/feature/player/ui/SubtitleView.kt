@@ -338,7 +338,7 @@ private fun SubtitleConfiguration.shouldUseAdvancedEdgeStyle(): Boolean = when (
 
 private fun List<Cue>.canUseTextSubtitleStyle(): Boolean = size == 1 && first().isDefaultTextCue()
 
-private fun Cue.isDefaultTextCue(): Boolean = text?.hasNoSpans() == true &&
+private fun Cue.isDefaultTextCue(): Boolean = text != null &&
     bitmap == null &&
     textAlignment in setOf(null, Layout.Alignment.ALIGN_CENTER) &&
     multiRowAlignment == null &&
@@ -354,8 +354,6 @@ private fun Cue.isDefaultTextCue(): Boolean = text?.hasNoSpans() == true &&
     !windowColorSet &&
     verticalType == Cue.TYPE_UNSET &&
     shearDegrees == 0f
-
-private fun CharSequence.hasNoSpans(): Boolean = this !is Spanned || getSpans(0, length, Any::class.java).isEmpty()
 
 private fun String.withBackground(shouldShowBackground: Boolean): CharSequence {
     if (!shouldShowBackground) return this
