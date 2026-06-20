@@ -224,7 +224,12 @@ private fun SubtitleContainer.applyAdvancedSubtitle(
         configuration.textSize
     }
     val baseTypeface = configuration.resolveTypeface()
-    val subtitleText = cues.first().text?.toString().orEmpty()
+    val cueText = cues.first().text
+    val subtitleText = if (configuration.shouldApplyEmbeddedStyles) {
+        cueText ?: ""
+    } else {
+        cueText?.toString().orEmpty()
+    }
     advancedSubtitleView.visibility = View.VISIBLE
     advancedSubtitleView.text = subtitleText.withBackground(configuration.shouldShowBackground)
     advancedSubtitleView.setTextColor(configuration.color.toArgb())
@@ -355,7 +360,7 @@ private fun Cue.isDefaultTextCue(): Boolean = text != null &&
     verticalType == Cue.TYPE_UNSET &&
     shearDegrees == 0f
 
-private fun String.withBackground(shouldShowBackground: Boolean): CharSequence {
+private fun CharSequence.withBackground(shouldShowBackground: Boolean): CharSequence {
     if (!shouldShowBackground) return this
     return SpannableString(this).apply {
         setSpan(BackgroundColorSpan(Color.BLACK), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
