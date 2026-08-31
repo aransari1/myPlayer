@@ -300,6 +300,6 @@ jobs:
           files: release/*.apk
           overwrite_files: true
           draft: false
-          name: Only Player ${{ needs.prepare.outputs.release_tag }}
+          name: My Player ${{ needs.prepare.outputs.release_tag }}
           body_path: release_notes.md
           tag_name: ${{ needs.prepare.outputs.release_tag }}

@@ -1,8 +1,8 @@
 import org.gradle.api.JavaVersion
 
 val currentJavaMajorVersion = JavaVersion.current().majorVersion.toInt()
-check(currentJavaMajorVersion >= 25) {
-    "JDK 25 or newer is required. Current version: ${JavaVersion.current()}"
+check(currentJavaMajorVersion >= 21) {
+    "JDK 21 or newer is required. Current version: ${JavaVersion.current()}"
 }
 
 pluginManagement {
