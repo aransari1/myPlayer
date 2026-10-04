@@ -35,6 +35,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -50,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 import one.only.player.core.common.Logger
 import one.only.player.core.common.Utils
 import one.only.player.core.common.extensions.canonicalPathOrSelf
@@ -61,13 +63,18 @@ import one.only.player.core.model.Folder
 import one.only.player.core.model.MediaLayoutMode
 import one.only.player.core.model.MediaViewMode
 import one.only.player.core.model.PlayerPreferences
+import one.only.player.core.model.StoragePath
 import one.only.player.core.model.Video
 import one.only.player.core.ui.R
 import one.only.player.core.ui.base.DataState
 import one.only.player.core.ui.components.AppDialog
+import one.only.player.core.ui.components.AppScaffold
+import one.only.player.core.ui.components.AppTopAppBar
 import one.only.player.core.ui.components.CancelButton
 import one.only.player.core.ui.components.DoneButton
+import one.only.player.core.ui.components.LocalTopBarBackdrop
 import one.only.player.core.ui.components.PageContentTopPadding
+import one.only.player.core.ui.components.surfaceBlur
 import one.only.player.core.ui.composables.PermissionMissingView
 import one.only.player.core.ui.composables.rememberRuntimePermissionState
 import one.only.player.core.ui.designsystem.AppIcons
@@ -102,13 +109,11 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PullToRefresh
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Surface
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.TopAppBarDefaults
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -212,6 +217,11 @@ internal fun MediaPickerScreen(
     var shouldShowPathPanel by rememberSaveable { mutableStateOf(false) }
 
     val isLibraryMode = uiState.screenMode == MediaPickerScreenMode.LIBRARY
+    val layoutDirectoryPath = if (isLibraryMode) {
+        uiState.folderPath ?: (uiState.mediaDataState as? DataState.Success)?.value?.path?.takeUnless { it == "/" }
+    } else {
+        null
+    }
     val isMoveMode = uiState.moveSelection != null && isLibraryMode
     val pathRootLabel = stringResource(R.string.tab_home)
     val storageRootLabels = rememberStorageRootLabels()
@@ -303,7 +313,7 @@ internal fun MediaPickerScreen(
         isLibraryMode &&
         uiState.folderName == null
 
-    Scaffold(
+    AppScaffold(
         topBar = {
             MediaPickerTopAppBar(
                 title = topBarTitle,
@@ -544,18 +554,32 @@ internal fun MediaPickerScreen(
                         launchPermissionRequest = { permissionState.launchPermissionRequest() },
                     ) {
                         val activeDataState = if (isMoveMode) uiState.moveTargetDataState else uiState.mediaDataState
-                        val shouldShowRefreshIndicator = uiState.isRefreshing
+                        var shouldShowRefreshIndicator by remember(uiState.isRefreshing) {
+                            mutableStateOf(uiState.isRefreshing)
+                        }
+                        LaunchedEffect(uiState.isRefreshing) {
+                            if (!uiState.isRefreshing) return@LaunchedEffect
+                            // 隐藏指示器后扫描继续执行，实际刷新状态仍用于阻止重复扫描。
+                            delay(REFRESH_INDICATOR_TIMEOUT_MILLIS)
+                            shouldShowRefreshIndicator = false
+                        }
                         val updatedScaffoldPadding = scaffoldPadding.copy(
                             top = if (shouldUseLargeTopBar) PageContentTopPadding else 0.dp,
                             start = 0.dp,
                         ).withBottomFallback()
                         val refreshTexts = rememberPullToRefreshTexts()
                         PullToRefresh(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag("media_picker_pull_refresh"),
                             isRefreshing = shouldShowRefreshIndicator,
                             onRefresh = { onEvent(MediaPickerUiEvent.Refresh) },
                             topAppBarScrollBehavior = scrollBehavior.takeIf { shouldUseLargeTopBar },
-                            refreshTexts = refreshTexts,
+                            refreshTexts = if (uiState.isRefreshing) {
+                                refreshTexts.dropLast(1) + refreshTexts[2]
+                            } else {
+                                refreshTexts
+                            },
                         ) {
                             when (activeDataState) {
                                 DataState.Loading -> Box(modifier = Modifier.fillMaxSize()) {
@@ -598,6 +622,7 @@ internal fun MediaPickerScreen(
                                         MediaView(
                                             rootFolder = rootFolder,
                                             preferences = uiState.preferences,
+                                            layoutDirectory = layoutDirectoryPath?.let(StoragePath::of),
                                             onFolderClick = {
                                                 onEvent(MediaPickerUiEvent.CacheFolderSnapshot(it))
                                                 onFolderClick(it.path, uiState.screenMode)
@@ -738,6 +763,8 @@ internal fun MediaPickerScreen(
     if (shouldShowQuickSettingsDialog) {
         QuickSettingsDialog(
             applicationPreferences = uiState.preferences,
+            isRoot = uiState.folderPath == null,
+            directoryPath = layoutDirectoryPath,
             onDismiss = { shouldShowQuickSettingsDialog = false },
             updatePreferences = { onEvent(MediaPickerUiEvent.UpdateMenu(it)) },
         )
@@ -835,7 +862,7 @@ private fun MediaPickerTopAppBar(
     actions: @Composable RowScope.() -> Unit,
 ) {
     if (shouldUseLargeTitle) {
-        TopAppBar(
+        AppTopAppBar(
             title = title,
             titlePadding = largeTitlePadding,
             scrollBehavior = scrollBehavior,
@@ -884,13 +911,15 @@ private fun MediaPickerSmallTitleTopAppBar(
         Modifier
     }
 
+    val topBarBackdrop = LocalTopBarBackdrop.current
     Surface(
-        color = MiuixTheme.colorScheme.surface,
+        color = if (topBarBackdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface,
         modifier = Modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
             .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal))
-            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
+            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
+            .surfaceBlur(topBarBackdrop),
     ) {
         Row(
             modifier = Modifier
@@ -1153,6 +1182,7 @@ private fun resolveRestoreScrollIndex(
 }
 
 private const val TAG = "MediaPickerScreen"
+private const val REFRESH_INDICATOR_TIMEOUT_MILLIS = 1_500L
 
 private val Folder.folderHeaderOffset: Int
     get() = if (folderList.isNotEmpty()) 1 else 0
@@ -1442,7 +1472,7 @@ private fun MediaPickerScreenPreview(
                 ),
                 preferences = ApplicationPreferences().copy(
                     mediaViewMode = MediaViewMode.FOLDER_TREE,
-                    mediaLayoutMode = MediaLayoutMode.GRID,
+                    videoLayoutMode = MediaLayoutMode.GRID,
                 ),
             ),
         )

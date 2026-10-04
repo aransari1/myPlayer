@@ -28,6 +28,8 @@ import one.only.player.core.model.ApplicationPreferences
 import one.only.player.core.model.ThumbnailGenerationStrategy
 import one.only.player.core.ui.R
 import one.only.player.core.ui.components.AppDialog
+import one.only.player.core.ui.components.AppScaffold
+import one.only.player.core.ui.components.AppTopAppBar
 import one.only.player.core.ui.components.CancelButton
 import one.only.player.core.ui.components.PageContentTopPadding
 import one.only.player.core.ui.components.PreferenceGroup
@@ -42,10 +44,8 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -80,9 +80,9 @@ private fun ThumbnailPreferencesContent(
 
     val scrollBehavior = MiuixScrollBehavior()
 
-    Scaffold(
+    AppScaffold(
         topBar = {
-            TopAppBar(
+            AppTopAppBar(
                 title = stringResource(id = R.string.thumbnail_generation),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
@@ -148,7 +148,6 @@ private fun ThumbnailPreferencesContent(
                 PreferenceSlider(
                     isEnabled = preferences.thumbnailGenerationStrategy != ThumbnailGenerationStrategy.FIRST_FRAME,
                     modifier = Modifier.testTag("item_settings_thumbnail_frame_position"),
-                    sliderModifier = Modifier.testTag("slider_settings_thumbnail_frame_position"),
                     title = stringResource(R.string.frame_position),
                     description = stringResource(R.string.frame_position_value, frameSliderValue),
                     icon = AppIcons.Frame,

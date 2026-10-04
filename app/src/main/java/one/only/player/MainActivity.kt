@@ -23,7 +23,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -52,10 +51,13 @@ import one.only.player.core.media.sync.MediaSynchronizer
 import one.only.player.core.model.ThemeConfig
 import one.only.player.core.ui.R as UiR
 import one.only.player.core.ui.components.AppDialog
+import one.only.player.core.ui.components.AppUpdateDialog
+import one.only.player.core.ui.components.LocalTopBarBlur
 import one.only.player.core.ui.composables.rememberRuntimePermissionState
 import one.only.player.core.ui.extensions.LocalRootBottomBarPadding
 import one.only.player.core.ui.theme.OnlyPlayerTheme
 import one.only.player.crash.StartupRecovery
+import one.only.player.crash.StartupStage
 import one.only.player.feature.player.PlayerActivity
 import one.only.player.feature.videopicker.navigation.navigateToHistory
 import one.only.player.feature.videopicker.navigation.navigateToPlaylists
@@ -81,6 +83,8 @@ import one.only.player.navigation.pageEnterTransition
 import one.only.player.navigation.pageExitTransition
 import one.only.player.navigation.pagePopEnterTransition
 import one.only.player.navigation.pagePopExitTransition
+import one.only.player.navigation.pagePredictivePopEnterTransition
+import one.only.player.navigation.pagePredictivePopExitTransition
 import one.only.player.navigation.rememberRootBlurBackdrop
 import one.only.player.navigation.rememberRootBottomBarPadding
 import one.only.player.navigation.rememberRootNavigationState
@@ -129,7 +133,7 @@ class MainActivity : AppCompatActivity() {
 
     @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
-        StartupRecovery.begin(this)
+        StartupRecovery.begin(application, StartupStage.MAIN_ACTIVITY)
 
         val persistedStartupPreferences = StartupPreferencesCache.consume(context = this)
         val bootstrapTheme = resolveBootstrapTheme(
@@ -173,6 +177,7 @@ class MainActivity : AppCompatActivity() {
             val preferences = (uiState as? MainActivityUiState.Success)?.preferences
             val shouldPreventScreenshots = preferences?.shouldPreventScreenshots == true
             val shouldHideInRecents = preferences?.shouldHideInRecents == true
+            val shouldBlurTopBar = preferences?.shouldBlurTopBar != false
             LaunchedEffect(shouldPreventScreenshots, shouldHideInRecents) {
                 if (preferences == null) return@LaunchedEffect
                 this@MainActivity.applyPrivacyProtection(
@@ -192,23 +197,25 @@ class MainActivity : AppCompatActivity() {
                 shouldUseDarkTheme = shouldUseDarkTheme,
                 shouldUseDynamicColor = shouldUseDynamicColor,
             ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MiuixTheme.colorScheme.surface,
-                ) {
-                    MainAppContent(
-                        shouldUseFloatingNavigationBar = preferences?.shouldUseFloatingNavigationBar == true,
-                        shouldBlurFloatingNavigationBar = preferences?.shouldBlurFloatingNavigationBar != false,
-                        shouldShowCloudTab = preferences?.shouldShowCloudTab != false,
-                        onMediaAccessAvailable = synchronizer::startSync,
-                    )
+                CompositionLocalProvider(LocalTopBarBlur provides shouldBlurTopBar) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MiuixTheme.colorScheme.surface,
+                    ) {
+                        MainAppContent(
+                            shouldUseFloatingNavigationBar = preferences?.shouldUseFloatingNavigationBar == true,
+                            shouldBlurFloatingNavigationBar = preferences?.shouldBlurFloatingNavigationBar != false,
+                            shouldShowCloudTab = preferences?.shouldShowCloudTab != false,
+                            onMediaAccessAvailable = synchronizer::startSync,
+                        )
+                    }
                 }
             }
         }
 
         window.decorView.doOnPreDraw {
             window.decorView.post {
-                StartupRecovery.markReady(this@MainActivity)
+                StartupRecovery.markReady()
             }
         }
     }
@@ -416,6 +423,12 @@ class MainActivity : AppCompatActivity() {
                         exitTransition = { pageExitTransition() },
                         popEnterTransition = { pagePopEnterTransition() },
                         popExitTransition = { pagePopExitTransition() },
+                        predictivePopEnterTransition = { swipeEdge ->
+                            pagePredictivePopEnterTransition(swipeEdge)
+                        },
+                        predictivePopExitTransition = { swipeEdge ->
+                            pagePredictivePopExitTransition(swipeEdge)
+                        },
                     ) {
                         composable<RootPagerRoute> {
                             RootScaffold(
@@ -572,33 +585,8 @@ private fun StartupUpdateDialog(viewModel: MainViewModel) {
     val updateInfo by viewModel.updateInfo.collectAsStateWithLifecycle()
     val info = updateInfo ?: return
 
-    val uriHandler = LocalUriHandler.current
-
-    AppDialog(
-        onDismissRequest = { viewModel.dismissUpdate() },
-        title = stringResource(UiR.string.update_dialog_title),
-        content = { Text(text = stringResource(UiR.string.update_dialog_message, info.latestVersion)) },
-        confirmButton = {
-            TextButton(
-                modifier = Modifier.testTag("btn_update_confirm"),
-                text = stringResource(UiR.string.update_dialog_confirm),
-                colors = ButtonDefaults.textButtonColorsPrimary(),
-                onClick = {
-                    viewModel.dismissUpdate()
-                    try {
-                        uriHandler.openUri(info.releaseUrl)
-                    } catch (_: Exception) {
-                        // 忽略
-                    }
-                },
-            )
-        },
-        dismissButton = {
-            TextButton(
-                modifier = Modifier.testTag("btn_update_not_now"),
-                text = stringResource(UiR.string.not_now),
-                onClick = { viewModel.dismissUpdate() },
-            )
-        },
+    AppUpdateDialog(
+        info = info,
+        onDismissRequest = viewModel::dismissUpdate,
     )
 }

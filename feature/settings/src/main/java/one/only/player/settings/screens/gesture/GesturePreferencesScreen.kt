@@ -26,6 +26,8 @@ import one.only.player.core.common.extensions.toString
 import one.only.player.core.model.DoubleTapGesture
 import one.only.player.core.model.PlayerPreferences
 import one.only.player.core.ui.R
+import one.only.player.core.ui.components.AppScaffold
+import one.only.player.core.ui.components.AppTopAppBar
 import one.only.player.core.ui.components.DoneCancelDialog
 import one.only.player.core.ui.components.PageContentTopPadding
 import one.only.player.core.ui.components.PreferenceGroup
@@ -44,10 +46,8 @@ import one.only.player.settings.extensions.name
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -72,9 +72,9 @@ private fun GesturePreferencesContent(
 ) {
     val scrollBehavior = MiuixScrollBehavior()
 
-    Scaffold(
+    AppScaffold(
         topBar = {
-            TopAppBar(
+            AppTopAppBar(
                 title = stringResource(id = R.string.gestures),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
@@ -113,9 +113,16 @@ private fun GesturePreferencesContent(
                     isChecked = uiState.preferences.shouldUseSeekControls,
                     onClick = { onEvent(GesturePreferencesUiEvent.ToggleUseSeekControls) },
                 )
+                PreferenceSwitch(
+                    modifier = Modifier.testTag("switch_settings_gesture_seek_preview_frame"),
+                    title = stringResource(id = R.string.seek_preview_frame),
+                    description = stringResource(id = R.string.seek_preview_frame_description),
+                    icon = AppIcons.Replay,
+                    isChecked = uiState.preferences.isSeekPreviewFrameEnabled,
+                    onClick = { onEvent(GesturePreferencesUiEvent.ToggleSeekPreviewFrame) },
+                )
                 PreferenceSlider(
                     modifier = Modifier.testTag("item_settings_gesture_seek_sensitivity"),
-                    sliderModifier = Modifier.testTag("slider_settings_gesture_seek_sensitivity"),
                     title = stringResource(R.string.seek_gesture_sensitivity),
                     description = uiState.preferences.seekSensitivity.toString(decimalPlaces = 2),
                     icon = AppIcons.Sensitivity,
@@ -134,7 +141,6 @@ private fun GesturePreferencesContent(
                 )
                 PreferenceSlider(
                     modifier = Modifier.testTag("item_settings_gesture_seek_increment"),
-                    sliderModifier = Modifier.testTag("slider_settings_gesture_seek_increment"),
                     title = stringResource(R.string.seek_increment),
                     description = stringResource(R.string.seconds, uiState.preferences.seekIncrement),
                     icon = AppIcons.Replay,
@@ -162,7 +168,6 @@ private fun GesturePreferencesContent(
                 )
                 PreferenceSlider(
                     modifier = Modifier.testTag("item_settings_gesture_brightness_sensitivity"),
-                    sliderModifier = Modifier.testTag("slider_settings_gesture_brightness_sensitivity"),
                     title = stringResource(R.string.brightness_gesture_sensitivity),
                     description = uiState.preferences.brightnessGestureSensitivity.toString(decimalPlaces = 2),
                     icon = AppIcons.Sensitivity,
@@ -192,7 +197,6 @@ private fun GesturePreferencesContent(
                 )
                 PreferenceSlider(
                     modifier = Modifier.testTag("item_settings_gesture_volume_sensitivity"),
-                    sliderModifier = Modifier.testTag("slider_settings_gesture_volume_sensitivity"),
                     title = stringResource(R.string.volume_gesture_sensitivity),
                     description = uiState.preferences.volumeGestureSensitivity.toString(decimalPlaces = 2),
                     icon = AppIcons.Sensitivity,

@@ -36,6 +36,7 @@ internal fun playerControlBindings(
     onPictureInPicture: () -> Unit,
     onScreenshot: () -> Unit,
     onPlayInBackground: () -> Unit,
+    onToggleControlsLock: () -> Unit,
 ): Map<PlayerControl, PlayerControlBinding> {
     val bindings = listOf(
         binding(
@@ -57,6 +58,10 @@ internal fun playerControlBindings(
         binding(
             control = PlayerControl.AUDIO,
             action = PlayerControlAction.OpenPanel(MenuRoute.Audio),
+        ),
+        binding(
+            control = PlayerControl.AUDIO_EQUALIZER,
+            action = PlayerControlAction.OpenPanel(MenuRoute.AudioEqualizer),
         ),
         binding(
             control = PlayerControl.CHAPTERS,
@@ -89,7 +94,7 @@ internal fun playerControlBindings(
         ),
         binding(
             control = PlayerControl.LOCK,
-            action = PlayerControlAction.OpenPanel(MenuRoute.ControlLock),
+            action = PlayerControlAction.Execute(onToggleControlsLock),
         ),
         binding(
             control = PlayerControl.MUTE,

@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 
+private const val MEDIA_METADATA_ADDED_SUBTITLE_IDS_KEY = "added_subtitle_ids"
+
 private const val MEDIA_METADATA_POSITION_KEY = "media_metadata_position"
 private const val MEDIA_METADATA_PLAYBACK_SPEED_KEY = "media_metadata_playback_speed"
 private const val MEDIA_METADATA_AUDIO_TRACK_INDEX_KEY = "audio_track_index"
@@ -11,9 +13,10 @@ private const val MEDIA_METADATA_SUBTITLE_TRACK_INDEX_KEY = "subtitle_track_inde
 private const val MEDIA_METADATA_VIDEO_ZOOM_KEY = "media_metadata_video_zoom"
 private const val MEDIA_METADATA_SUBTITLE_DELAY_KEY = "media_metadata_subtitle_delay"
 private const val MEDIA_METADATA_SUBTITLE_SPEED_KEY = "media_metadata_subtitle_speed"
+
+// 仅供播放列表分辨率标签使用，编码宽高；方向判断走 player.videoSize
 private const val MEDIA_METADATA_VIDEO_WIDTH_KEY = "media_metadata_video_width"
 private const val MEDIA_METADATA_VIDEO_HEIGHT_KEY = "media_metadata_video_height"
-private const val MEDIA_METADATA_VIDEO_ROTATION_KEY = "media_metadata_video_rotation"
 private const val MEDIA_METADATA_HAS_RENDERED_FIRST_FRAME_KEY = "media_metadata_has_rendered_first_frame"
 private const val MEDIA_METADATA_APPROXIMATE_SEEK_ENABLED_KEY = "media_metadata_approximate_seek_enabled"
 private const val MEDIA_METADATA_VIDEO_EFFECTS_AVAILABLE_KEY = "media_metadata_video_effects_available"
@@ -34,7 +37,6 @@ private fun Bundle.setExtras(
     subtitleSpeed: Float? = null,
     videoWidth: Int? = null,
     videoHeight: Int? = null,
-    videoRotation: Int? = null,
     hasRenderedFirstFrame: Boolean? = null,
     isApproximateSeekEnabled: Boolean? = null,
     isVideoEffectsAvailable: Boolean? = null,
@@ -43,6 +45,7 @@ private fun Bundle.setExtras(
     remoteProtocol: String? = null,
     localParentPath: String? = null,
     remoteDirectoryPath: String? = null,
+    addedSubtitleIds: List<String>? = null,
 ) = apply {
     positionMs?.let { putLong(MEDIA_METADATA_POSITION_KEY, it) }
     videoScale?.let { putFloat(MEDIA_METADATA_VIDEO_ZOOM_KEY, it) }
@@ -53,7 +56,6 @@ private fun Bundle.setExtras(
     subtitleSpeed?.let { putFloat(MEDIA_METADATA_SUBTITLE_SPEED_KEY, it) }
     videoWidth?.let { putInt(MEDIA_METADATA_VIDEO_WIDTH_KEY, it) }
     videoHeight?.let { putInt(MEDIA_METADATA_VIDEO_HEIGHT_KEY, it) }
-    videoRotation?.let { putInt(MEDIA_METADATA_VIDEO_ROTATION_KEY, it) }
     hasRenderedFirstFrame?.let { putBoolean(MEDIA_METADATA_HAS_RENDERED_FIRST_FRAME_KEY, it) }
     isApproximateSeekEnabled?.let { putBoolean(MEDIA_METADATA_APPROXIMATE_SEEK_ENABLED_KEY, it) }
     isVideoEffectsAvailable?.let { putBoolean(MEDIA_METADATA_VIDEO_EFFECTS_AVAILABLE_KEY, it) }
@@ -62,6 +64,7 @@ private fun Bundle.setExtras(
     remoteProtocol?.let { putString(MEDIA_METADATA_REMOTE_PROTOCOL_KEY, it) }
     localParentPath?.let { putString(MEDIA_METADATA_LOCAL_PARENT_PATH_KEY, it) }
     remoteDirectoryPath?.let { putString(MEDIA_METADATA_REMOTE_DIRECTORY_PATH_KEY, it) }
+    addedSubtitleIds?.let { putStringArrayList(MEDIA_METADATA_ADDED_SUBTITLE_IDS_KEY, ArrayList(it)) }
 }
 
 fun MediaMetadata.Builder.setExtras(
@@ -74,7 +77,6 @@ fun MediaMetadata.Builder.setExtras(
     subtitleSpeed: Float? = null,
     videoWidth: Int? = null,
     videoHeight: Int? = null,
-    videoRotation: Int? = null,
     hasRenderedFirstFrame: Boolean? = null,
     isApproximateSeekEnabled: Boolean? = null,
     isVideoEffectsAvailable: Boolean? = null,
@@ -84,6 +86,7 @@ fun MediaMetadata.Builder.setExtras(
     remoteProtocol: String? = null,
     localParentPath: String? = null,
     remoteDirectoryPath: String? = null,
+    addedSubtitleIds: List<String>? = null,
 ): MediaMetadata.Builder = setExtras(
     Bundle().setExtras(
         positionMs = positionMs,
@@ -95,7 +98,6 @@ fun MediaMetadata.Builder.setExtras(
         subtitleSpeed = subtitleSpeed,
         videoWidth = videoWidth,
         videoHeight = videoHeight,
-        videoRotation = videoRotation,
         hasRenderedFirstFrame = hasRenderedFirstFrame,
         isApproximateSeekEnabled = isApproximateSeekEnabled,
         isVideoEffectsAvailable = isVideoEffectsAvailable,
@@ -104,6 +106,7 @@ fun MediaMetadata.Builder.setExtras(
         remoteProtocol = remoteProtocol,
         localParentPath = localParentPath,
         remoteDirectoryPath = remoteDirectoryPath,
+        addedSubtitleIds = addedSubtitleIds,
     ).apply {
         requestHeaders.forEach { (key, value) ->
             putString("$MEDIA_METADATA_REQUEST_HEADERS_PREFIX$key", value)
@@ -153,6 +156,7 @@ val MediaMetadata.subtitleSpeed: Float?
             .takeIf { containsKey(MEDIA_METADATA_SUBTITLE_SPEED_KEY) }
     }
 
+// 编码宽高，仅供分辨率标签展示
 val MediaMetadata.videoWidth: Int?
     get() = extras?.run {
         getInt(MEDIA_METADATA_VIDEO_WIDTH_KEY)
@@ -163,12 +167,6 @@ val MediaMetadata.videoHeight: Int?
     get() = extras?.run {
         getInt(MEDIA_METADATA_VIDEO_HEIGHT_KEY)
             .takeIf { containsKey(MEDIA_METADATA_VIDEO_HEIGHT_KEY) }
-    }
-
-val MediaMetadata.videoRotation: Int?
-    get() = extras?.run {
-        getInt(MEDIA_METADATA_VIDEO_ROTATION_KEY)
-            .takeIf { containsKey(MEDIA_METADATA_VIDEO_ROTATION_KEY) }
     }
 
 val MediaMetadata.hasRenderedFirstFrame: Boolean
@@ -222,7 +220,6 @@ fun MediaItem.copy(
     subtitleSpeed: Float? = this.mediaMetadata.subtitleSpeed,
     videoWidth: Int? = this.mediaMetadata.videoWidth,
     videoHeight: Int? = this.mediaMetadata.videoHeight,
-    videoRotation: Int? = this.mediaMetadata.videoRotation,
     hasRenderedFirstFrame: Boolean? = this.mediaMetadata.hasRenderedFirstFrame,
     isApproximateSeekEnabled: Boolean? = this.mediaMetadata.isApproximateSeekEnabled,
     isVideoEffectsAvailable: Boolean? = this.mediaMetadata.isVideoEffectsAvailable,
@@ -232,6 +229,7 @@ fun MediaItem.copy(
     remoteProtocol: String? = this.mediaMetadata.remoteProtocol,
     localParentPath: String? = this.mediaMetadata.localParentPath,
     remoteDirectoryPath: String? = this.mediaMetadata.remoteDirectoryPath,
+    addedSubtitleIds: List<String> = this.mediaMetadata.addedSubtitleIds,
 ): MediaItem = buildUpon().setMediaMetadata(
     mediaMetadata.buildUpon()
         .setDurationMs(durationMs)
@@ -246,7 +244,6 @@ fun MediaItem.copy(
                 subtitleSpeed = subtitleSpeed,
                 videoWidth = videoWidth,
                 videoHeight = videoHeight,
-                videoRotation = videoRotation,
                 hasRenderedFirstFrame = hasRenderedFirstFrame,
                 isApproximateSeekEnabled = isApproximateSeekEnabled,
                 isVideoEffectsAvailable = isVideoEffectsAvailable,
@@ -255,6 +252,7 @@ fun MediaItem.copy(
                 remoteProtocol = remoteProtocol,
                 localParentPath = localParentPath,
                 remoteDirectoryPath = remoteDirectoryPath,
+                addedSubtitleIds = addedSubtitleIds,
             ).apply {
                 requestHeaders.forEach { (key, value) ->
                     putString("$MEDIA_METADATA_REQUEST_HEADERS_PREFIX$key", value)
@@ -262,3 +260,85 @@ fun MediaItem.copy(
             },
         ).build(),
 ).build()
+
+// 默认搜索词保留片名和集数，去除视频扩展名与发布标签。
+fun MediaItem?.toSearchQuery(title: String?): String {
+    if (this == null) return ""
+
+    val uri = localConfiguration?.uri
+    val candidate = title?.trim().orEmpty().ifBlank {
+        uri?.takeIf { it.scheme != "content" }?.lastPathSegment?.trim().orEmpty()
+    }
+    if (candidate.isEmpty()) return ""
+
+    return candidate.dropVideoExtension().toSearchableTitle()
+}
+
+// 未清理的片源名，保留年份、季集和发布标签供结果排序比对
+fun MediaItem?.toReleaseName(title: String?): String {
+    if (this == null) return ""
+
+    val uri = localConfiguration?.uri
+    val candidate = title?.trim().orEmpty().ifBlank {
+        uri?.takeIf { it.scheme != "content" }?.lastPathSegment?.trim().orEmpty()
+    }
+    return candidate.dropVideoExtension()
+}
+
+private fun String.dropVideoExtension(): String {
+    val extension = substringAfterLast('.', missingDelimiterValue = "").lowercase()
+    return if (extension in VIDEO_EXTENSIONS) substringBeforeLast('.') else this
+}
+
+// 字幕接口按全词匹配，1080p/x265/WEB-DL 这类发布标签只会把命中面缩到零，从第一个标签起截断
+private fun String.toSearchableTitle(): String {
+    val tokens = BRACKET_GROUP_REGEX.replace(this, " ")
+        .split(SEARCH_TOKEN_REGEX)
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+    val kept = tokens.takeWhile { !it.isReleaseTag() }
+    if (kept.none { token -> token.any { it.isLetter() } }) return this
+    return kept.joinToString(separator = " ").trim().ifEmpty { this }
+}
+
+private fun String.isReleaseTag(): Boolean {
+    val token = lowercase().trim('[', ']', '(', ')')
+    return RELEASE_TAG_REGEX.matches(token) || RELEASE_TAG_REGEX.matches(token.substringBefore('-'))
+}
+
+private val SEARCH_TOKEN_REGEX = Regex("[._\\s]+")
+
+// [YTS.MX]、(2021) 这类括号段是元数据，先整体剔除再分词
+private val BRACKET_GROUP_REGEX = Regex("\\[[^\\]]*]|\\([^)]*\\)")
+
+private val RELEASE_TAG_REGEX = Regex(
+    "(\\d{3,4}[pi]|4k|8k|uhd|hdr\\d*|sdr|dolbyvision|10bit|8bit|x26\\d|h26\\d|hevc|avc|xvid|divx|" +
+        "web-?dl|webrip|web|blu-?ray|bdrip|brrip|dvdrip|dvd|hdtv|hdrip|remux|" +
+        "aac\\d*|ac3|eac3|dts(-hd)?|truehd|atmos|flac|opus|mp3|\\d\\.\\d|" +
+        "amzn|nf|dsnp|hmax|atvp|internal|proper|repack|extended|remastered|imax|yts(\\.[a-z]+)?|rarbg|yify)",
+)
+
+private val VIDEO_EXTENSIONS = setOf(
+    "3gp",
+    "avi",
+    "divx",
+    "f4v",
+    "flv",
+    "iso",
+    "m2ts",
+    "m4v",
+    "mkv",
+    "mov",
+    "mp4",
+    "mpeg",
+    "mpg",
+    "ogv",
+    "rmvb",
+    "ts",
+    "vob",
+    "webm",
+    "wmv",
+)
+
+val MediaMetadata.addedSubtitleIds: List<String>
+    get() = extras?.getStringArrayList(MEDIA_METADATA_ADDED_SUBTITLE_IDS_KEY).orEmpty()

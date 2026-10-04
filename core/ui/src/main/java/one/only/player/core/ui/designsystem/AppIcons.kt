@@ -13,17 +13,21 @@ object AppIcons {
     val Audio: ImageVector get() = MingCuteAudio
     val Background: ImageVector get() = MingCuteBackground
     val BlurOn: ImageVector get() = MingCuteBlurOn
+    val Bookmark: ImageVector get() = MingCuteBookmark
     val BorderOuter: ImageVector get() = MingCuteBorderOuter
     val Bold: ImageVector get() = MingCuteBold
     val Brightness: ImageVector get() = MingCuteBrightness
     val Brush: ImageVector get() = MingCuteBrush
     val BugReport: ImageVector get() = MingCuteBugReport
     val Caption: ImageVector get() = MingCuteCaption
+    val ChartLine: ImageVector get() = MingCuteChartLine
     val Check: ImageVector get() = MingCuteCheck
     val CheckBox: ImageVector get() = MingCuteCheckBox
     val CheckBoxOutline: ImageVector get() = MingCuteCheckBoxOutline
     val Close: ImageVector get() = MingCuteClose
+    val Code: ImageVector get() = MingCuteCode
     val Cloud: ImageVector get() = MingCuteCloud
+    val ColorFilter: ImageVector get() = MingCuteColorFilter
     val Copy: ImageVector get() = MingCuteCopy
     val DarkMode: ImageVector get() = MingCuteDarkMode
     val DashBoard: ImageVector get() = MingCuteDashBoard
@@ -33,8 +37,11 @@ object AppIcons {
     val DeselectAll: ImageVector get() = MingCuteDeselectAll
     val DoubleTap: ImageVector get() = MingCuteDoubleTap
     val DriveFileMove: ImageVector get() = MingCuteDriveFileMove
+    val Drop: ImageVector get() = MingCuteDrop
     val Edit: ImageVector get() = MingCuteEdit
+    val Equalizer: ImageVector get() = MingCuteSignal
     val ExpandMore: ImageVector get() = MingCuteExpandMore
+    val Exposure: ImageVector get() = MingCuteExposure
     val ExtraSettings: ImageVector get() = MingCuteExtraSettings
     val FileOpen: ImageVector get() = MingCuteFileOpen
     val Focus: ImageVector get() = MingCuteFocus
@@ -55,6 +62,8 @@ object AppIcons {
     val LibraryBooks: ImageVector get() = MingCuteLibraryBooks
     val Link: ImageVector get() = MingCuteLink
     val Lock: ImageVector get() = MingCuteLock
+    val Magic: ImageVector get() = MingCuteMagic
+    val Unlock: ImageVector get() = MingCuteUnlock
     val Loop: ImageVector get() = MingCuteLoop
     val Menu: ImageVector get() = MingCuteMenu
     val MoreVert: ImageVector get() = MingCuteMoreVert
@@ -67,6 +76,7 @@ object AppIcons {
     val Player: ImageVector get() = MingCutePlayer
     val PlaylistPlay: ImageVector get() = MingCutePlaylistPlay
     val Priority: ImageVector get() = MingCutePriority
+    val Rainbow: ImageVector get() = MingCuteRainbow
     val Remove: ImageVector get() = MingCuteRemove
     val Replay: ImageVector get() = MingCuteReplay
     val Resume: ImageVector get() = MingCuteResume
@@ -77,6 +87,7 @@ object AppIcons {
     val Search: ImageVector get() = MingCuteSearch
     val SelectAll: ImageVector get() = MingCuteSelectAll
     val Sensitivity: ImageVector get() = MingCuteSensitivity
+    val Server: ImageVector get() = MingCuteServer
     val Settings: ImageVector get() = MingCuteSettings
     val Share: ImageVector get() = MingCuteShare
     val Shadow: ImageVector get() = MingCuteShadow
@@ -94,6 +105,8 @@ object AppIcons {
     val TextColor: ImageVector get() = MingCuteTextColor
     val Timer: ImageVector get() = MingCuteTimer
     val Title: ImageVector get() = MingCuteTitle
+    val Transfer: ImageVector get() = MingCuteTransfer
+    val Translate: ImageVector get() = MingCuteTranslate
     val Update: ImageVector get() = MingCuteUpdate
     val Video: ImageVector get() = MingCuteVideo
     val VolumeUp: ImageVector get() = MingCuteVolumeUp
