@@ -1,6 +1,6 @@
 <div align="center">
 
-# Only Player
+# My Player
 
 [![English](https://img.shields.io/badge/English-red?style=flat-square)](README.md)
 &nbsp;
@@ -17,7 +17,7 @@
 
 <br>
 
-Only Player is an Android video player for local media, built with Kotlin, Jetpack Compose, Hilt, and Media3 / ExoPlayer.
+My Player is an Android video player for local media, built with Kotlin, Jetpack Compose, Hilt, and Media3 / ExoPlayer.
 
 Browse videos by folder, resume playback, use gesture controls, and render ASS subtitle effects. In-app language switching and settings backup make it easy to keep your preferred setup across devices.
 
@@ -74,7 +74,7 @@ Open the downloaded APK and follow Android's installation prompts. Allow install
 
 1. Open the app and grant media access when prompted.
 2. Browse your library or use search to find a video. Quick settings let you change the view, layout, and sorting.
-3. Tap a video to start playback. You can also open videos from another app using Only Player.
+3. Tap a video to start playback. You can also open videos from another app using My Player.
 
 ### Main Features
 
@@ -266,7 +266,7 @@ Feature and fix pull requests target **`dev`**. Use **`dev` → `main`** only to
 
 <sub>[↑ Back to Navigation](#navigation)</sub>
 
-Only Player is licensed under [GNU GPL v3](LICENSE). Third-party components remain subject to their respective licenses.
+My Player is licensed under [GNU GPL v3](LICENSE). Third-party components remain subject to their respective licenses.
 
 <br>
 
@@ -276,4 +276,4 @@ Only Player is licensed under [GNU GPL v3](LICENSE). Third-party components rema
 
 <sub>[↑ Back to Navigation](#navigation)</sub>
 
-Only Player continues from [Next Player](https://github.com/anilbeesetti/nextplayer). Thanks to the original project and all upstream contributors for the foundation and continued maintenance.
+My Player continues from [Next Player](https://github.com/anilbeesetti/nextplayer). Thanks to the original project and all upstream contributors for the foundation and continued maintenance.

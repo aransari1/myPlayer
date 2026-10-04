@@ -831,7 +831,7 @@ class CloudDocumentsProvider : DocumentsProvider() {
         private const val HTTP_PARTIAL_CONTENT_CODE = 206
         private const val ROOT_ID = "cloud"
         private const val ROOT_DOCUMENT_ID = "root"
-        private const val ROOT_TITLE = "Only Player"
+        private const val ROOT_TITLE = "My Player"
         private const val CONNECT_TIMEOUT_SECONDS = 15L
         private const val READ_TIMEOUT_SECONDS = 30L
         private const val REMOTE_READ_CACHE_BLOCK_SIZE_BYTES = 512 * 1024

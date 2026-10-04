@@ -188,9 +188,9 @@
     <string name="add">新增</string>
     <string name="name">名稱</string>
     <string name="extension">副檔名</string>
-    <string name="permission_settings">Only Player 應用程式需要 \"%1$s\" 權限以存取或播放媒體。沒有它，媒體存取與播放功能將無法工作。要完整地使用此應用程式，請從設定中授予權限，因為它已經被永久地拒絕。</string>
-    <string name="local_network_permission_info">Only Player 需要「附近的裝置」權限才能連線 192.168.*.* 等區域網路裝置。請授予此權限後繼續。</string>
-    <string name="local_network_permission_settings">Only Player 需要「附近的裝置」權限才能連線 192.168.*.* 等區域網路裝置。請在系統設定中授予此權限後繼續。</string>
+    <string name="permission_settings">My Player 應用程式需要 \"%1$s\" 權限以存取或播放媒體。沒有它，媒體存取與播放功能將無法工作。要完整地使用此應用程式，請從設定中授予權限，因為它已經被永久地拒絕。</string>
+    <string name="local_network_permission_info">My Player 需要「附近的裝置」權限才能連線 192.168.*.* 等區域網路裝置。請授予此權限後繼續。</string>
+    <string name="local_network_permission_settings">My Player 需要「附近的裝置」權限才能連線 192.168.*.* 等區域網路裝置。請在系統設定中授予此權限後繼續。</string>
     <string name="monospace">等寬字型</string>
     <string name="folder_path">資料夾路徑</string>
     <string name="appearance_description">調整此應用程式以符合您的喜好</string>
@@ -220,7 +220,7 @@
     <string name="select_playback_speed">選擇播放速度</string>
     <string name="seek_gesture">跳轉手勢</string>
     <string name="require_audio_focus_desc">當此播放器播放影片時，暫停其他播放器，反之亦然。</string>
-    <string name="permission_info">Only Player 應用程式需要 \"%1$s\" 權限以存取或播放媒體。沒有它，媒體存取與播放功能將無法工作。要完整地使用此應用程式，請授予權限。</string>
+    <string name="permission_info">My Player 應用程式需要 \"%1$s\" 權限以存取或播放媒體。沒有它，媒體存取與播放功能將無法工作。要完整地使用此應用程式，請授予權限。</string>
     <string name="settings">設定</string>
     <string name="z_a">Z-A</string>
     <string name="decoder_desc">解碼器、影片濾鏡選項</string>
@@ -422,7 +422,7 @@
     <string name="android_version">Android 版本</string>
     <string name="error_opening_link">沒有應用程式可開啟這個連結</string>
     <string name="all_files_access_title">允許所有檔案存取</string>
-    <string name="all_files_access_required_desc">Only Player 需要「所有檔案存取權限」，才能掃描並管理任意資料夾中的影片。請前往系統設定授予權限後繼續。</string>
+    <string name="all_files_access_required_desc">My Player 需要「所有檔案存取權限」，才能掃描並管理任意資料夾中的影片。請前往系統設定授予權限後繼續。</string>
     <string name="media_library_all_files_access_desc">忽略 .nomedia 和回收站功能需要所有檔案存取權限，授權後才能啟用這兩項功能。</string>
     <string name="not_now">稍後</string>
     <string name="grid">格狀</string>

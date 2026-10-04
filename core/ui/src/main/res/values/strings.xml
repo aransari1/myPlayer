@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Only Player</string>
+    <string name="app_name" translatable="false">My Player</string>
     <string name="about_description">Version and device info</string>
     <string name="about_name">About</string>
     <string name="appearance_description">Adjust the app to your liking</string>
@@ -24,12 +24,12 @@
     <string name="pull_to_refresh_hint_refreshing">Refreshing…</string>
     <string name="pull_to_refresh_hint_complete">Refresh complete</string>
     <string name="open_settings">Open Settings</string>
-    <string name="permission_info">The Only Player app needs \"%1$s\" permission to access and play media. Without it, media access and playback won\'t work. To use the app fully, grant the permission.</string>
+    <string name="permission_info">The My Player app needs \"%1$s\" permission to access and play media. Without it, media access and playback won\'t work. To use the app fully, grant the permission.</string>
     <string name="permission_not_granted">Permission Not Granted</string>
     <string name="permission_request">Permission Request</string>
-    <string name="permission_settings">The Only Player app needs \"%1$s\" permission to access and play media. Without it, media access and playback won\'t work. To use the app fully, grant the permission from settings since it was permanently denied.</string>
-    <string name="local_network_permission_info">Only Player needs Nearby devices permission to reach LAN devices such as a NAS at 192.168.*.*. Grant the permission to continue.</string>
-    <string name="local_network_permission_settings">Only Player needs Nearby devices permission to reach LAN devices such as a NAS at 192.168.*.*. Grant the permission in system settings to continue.</string>
+    <string name="permission_settings">The My Player app needs \"%1$s\" permission to access and play media. Without it, media access and playback won\'t work. To use the app fully, grant the permission from settings since it was permanently denied.</string>
+    <string name="local_network_permission_info">My Player needs Nearby devices permission to reach LAN devices such as a NAS at 192.168.*.*. Grant the permission to continue.</string>
+    <string name="local_network_permission_settings">My Player needs Nearby devices permission to reach LAN devices such as a NAS at 192.168.*.*. Grant the permission in system settings to continue.</string>
     <string name="player_controls_exit">Back</string>
     <string name="player_controls_next">Player next</string>
     <string name="player_controls_play_pause">Player play pause</string>
@@ -433,7 +433,7 @@
     <string name="android_version">Android version</string>
     <string name="error_opening_link">No app found to handle this link</string>
     <string name="all_files_access_title">Allow all files access</string>
-    <string name="all_files_access_required_desc">Only Player needs all files access to scan and manage videos in any folder. Grant access in system settings to continue.</string>
+    <string name="all_files_access_required_desc">My Player needs all files access to scan and manage videos in any folder. Grant access in system settings to continue.</string>
     <string name="media_library_all_files_access_desc">Ignore .nomedia files and recycle bin require all files access. Grant permission to enable both features.</string>
     <string name="not_now">Not now</string>
     <string name="media_layout">Media Layout</string>
